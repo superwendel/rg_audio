@@ -1,0 +1,432 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows / MSVC hosted CI gate
+    runs-on: windows-2025
+    timeout-minutes: 60
+    env:
+      RG_CORE_DIR: ${{ github.workspace }}\_deps\rg_core
+      RG_GUI_DIR: ${{ github.workspace }}\_deps\rg_gui
+      RG_TEXT_DIR: ${{ github.workspace }}\_deps\rg_text
+      VCPKG_ROOT: ${{ github.workspace }}\_deps\vcpkg
+      VCPKG_DISABLE_METRICS: 1
+
+    steps:
+      - name: Check out rg_audio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out pinned rg_core
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: superwendel/rg_core
+          ref: 27d5475a4af221813977f4b7d62e4e3f88cffab2
+          path: _deps/rg_core
+          persist-credentials: false
+
+      - name: Check out pinned rg_gui
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: superwendel/rg_gui
+          ref: cf79949550c8cbecf7ed2e206e2b95e88c3ab09e
+          path: _deps/rg_gui
+          persist-credentials: false
+
+      - name: Check out pinned rg_text
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: superwendel/rg_text
+          ref: 0161dfd1790e9469a39c734fa61cb5640a36fd51
+          path: _deps/rg_text
+          persist-credentials: false
+
+      - name: Check out pinned vcpkg
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: microsoft/vcpkg
+          ref: 91e8cb4be8195112ea3a9c7e5846bd0b3ff74673
+          path: _deps/vcpkg
+          persist-credentials: false
+
+      - name: Initialize vcpkg paths
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_ENV -Value "VCPKG_INSTALLED_DIR=$env:RUNNER_TEMP\vcpkg-installed"
+          Add-Content -Path $env:GITHUB_ENV -Value "VCPKG_BINARY_CACHE=$env:RUNNER_TEMP\vcpkg-binary-cache"
+          Add-Content -Path $env:GITHUB_ENV -Value "VCPKG_BINARY_SOURCES=clear;files,$env:RUNNER_TEMP\vcpkg-binary-cache,readwrite"
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ${{ runner.temp }}\vcpkg-binary-cache
+          key: vcpkg-${{ runner.os }}-x64-windows-${{ hashFiles('vcpkg.json') }}
+
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:VCPKG_BINARY_CACHE | Out-Null
+          & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
+
+      - name: Install pinned SDL development tools
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_ROOT\vcpkg.exe" install --triplet x64-windows "--x-install-root=$env:VCPKG_INSTALLED_DIR"
+
+      - name: Configure explicit SDL and shader paths
+        shell: pwsh
+        run: |
+          $prefix = Join-Path $env:VCPKG_INSTALLED_DIR 'x64-windows'
+          $shadercross = @(
+            (Join-Path $prefix 'tools\sdl3-shadercross\shadercross.exe'),
+            (Join-Path $prefix 'tools\sdl3_shadercross\shadercross.exe')
+          ) | Where-Object {
+            Test-Path -LiteralPath $_ -PathType Leaf
+          } | Select-Object -First 1
+          if (-not $shadercross) {
+            throw 'shadercross.exe was not found in either vcpkg tool directory spelling.'
+          }
+
+          $required = @(
+            (Join-Path $prefix 'include\SDL3\SDL.h'),
+            (Join-Path $prefix 'lib\SDL3.lib'),
+            (Join-Path $prefix 'bin\SDL3.dll'),
+            $shadercross,
+            (Join-Path $env:RG_CORE_DIR 'src\rg_defs.h'),
+            (Join-Path $env:RG_GUI_DIR 'src\rg_gui_gpu.h'),
+            (Join-Path $env:RG_TEXT_DIR 'src\rg_text.h')
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              throw "Required dependency output is missing: $path"
+            }
+          }
+
+          Add-Content -Path $env:GITHUB_ENV -Value "SDL3_INCLUDE_DIR=$(Join-Path $prefix 'include')"
+          Add-Content -Path $env:GITHUB_ENV -Value "SDL3_LIB_DIR=$(Join-Path $prefix 'lib')"
+          Add-Content -Path $env:GITHUB_ENV -Value "SDL3_BIN_DIR=$(Join-Path $prefix 'bin')"
+          Add-Content -Path $env:GITHUB_ENV -Value "SHADERCROSS_EXE=$shadercross"
+          Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $prefix 'bin')
+          Add-Content -Path $env:GITHUB_PATH -Value (Split-Path -Parent $shadercross)
+
+      - name: Run tests and compile optional tools and shaders
+        shell: pwsh
+        run: cmd.exe /d /c build.bat test_ci
+
+      - name: Verify hosted compile-only outputs
+        shell: pwsh
+        run: |
+          $formats = @{
+            DXIL = '*.dxil'
+            SPIRV = '*.spv'
+            MSL = '*.msl'
+          }
+          foreach ($entry in $formats.GetEnumerator()) {
+            $directory = Join-Path $env:GITHUB_WORKSPACE "shaders\Compiled\$($entry.Key)"
+            $files = @(Get-ChildItem -LiteralPath $directory -File -Filter $entry.Value)
+            if ($files.Count -ne 6) {
+              throw "Expected 6 $($entry.Key) shaders, found $($files.Count)."
+            }
+            if ($files | Where-Object { $_.Length -eq 0 }) {
+              throw "$($entry.Key) contains an empty shader output."
+            }
+          }
+
+          $assetRoot = Join-Path $env:GITHUB_WORKSPACE 'tools\assets\rgs_player'
+          $fontPath = Join-Path $assetRoot 'inter_medium_16.font'
+          $atlasPath = Join-Path $assetRoot 'inter_medium_16.rgba.b64'
+          $fontHash = (Get-FileHash -LiteralPath $fontPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($fontHash -ne 'e31e494cee22d7a7b03355d70862e6631993a55dc75f23b3e0aa896bb1369e83') {
+            throw "Unexpected player font hash: $fontHash"
+          }
+          $atlasBytes = [Convert]::FromBase64String((Get-Content -LiteralPath $atlasPath -Raw))
+          if ($atlasBytes.Length -ne 131072) {
+            throw "Unexpected decoded player atlas size: $($atlasBytes.Length)"
+          }
+          $sha256 = [Security.Cryptography.SHA256]::Create()
+          try {
+            $atlasHash = [BitConverter]::ToString($sha256.ComputeHash($atlasBytes)).Replace('-', '').ToLowerInvariant()
+          } finally {
+            $sha256.Dispose()
+          }
+          if ($atlasHash -ne '9d67b0f6edfe34294fecd4888e8058a9c5e21e1fa2589b8ff873496b6230e626') {
+            throw "Unexpected decoded player atlas hash: $atlasHash"
+          }
+
+          foreach ($artifact in @(
+            'test_rgs.exe',
+            'test_rgs_allocator.exe',
+            'test_rgs_cpp.exe',
+            'test_rgs_stream.exe',
+            'test_rgs_tools.exe',
+            'test_rgs_player_stream.exe',
+            'example_rgs.exe',
+            'rgs_convert.exe',
+            'rgs_player.exe'
+          )) {
+            $path = Join-Path $env:GITHUB_WORKSPACE $artifact
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
+                (Get-Item -LiteralPath $path).Length -eq 0) {
+              throw "Expected build artifact is missing or empty: $artifact"
+            }
+          }
+          Write-Host 'GPU and audio-device execution are intentionally excluded on hosted runners.'
+
+  c99-runtime:
+    name: Linux / ${{ matrix.cc }} / strict C99 + C++17
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cc: gcc
+            cxx: g++
+          - cc: clang
+            cxx: clang++
+    env:
+      RG_CORE_DIR: ${{ github.workspace }}/_deps/rg_core
+
+    steps:
+      - name: Check out rg_audio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out pinned rg_core
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: superwendel/rg_core
+          ref: 27d5475a4af221813977f4b7d62e4e3f88cffab2
+          path: _deps/rg_core
+          persist-credentials: false
+
+      - name: Build and run strict runtime checks
+        shell: bash
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          set -euo pipefail
+          output_dir="$RUNNER_TEMP/rg-audio-${CC}"
+          mkdir -p "$output_dir"
+          common=(
+            -std=c99
+            -pedantic-errors
+            -O2
+            -Wall
+            -Wextra
+            -Werror
+            -I src
+            -I "$RG_CORE_DIR/src"
+          )
+
+          for target in test_rgs test_rgs_allocator test_rgs_stream test_rgs_player_stream; do
+            "$CC" "${common[@]}" "tests/$target.c" -lm -o "$output_dir/$target"
+            "$output_dir/$target"
+          done
+
+          "$CC" "${common[@]}" examples/example_rgs.c -lm -o "$output_dir/example_rgs"
+          "$output_dir/example_rgs"
+
+          "$CXX" -std=c++17 -pedantic-errors -O2 -Wall -Wextra -Werror \
+            -I src -I "$RG_CORE_DIR/src" tests/test_rgs_cpp.cpp \
+            -o "$output_dir/test_rgs_cpp"
+          "$output_dir/test_rgs_cpp"
+
+      - name: Build and run non-performance-gated benchmark diagnostics
+        if: matrix.cc == 'gcc'
+        shell: bash
+        run: |
+          set -euo pipefail
+          output_dir="$RUNNER_TEMP/rg-audio-bench"
+          mkdir -p "$output_dir"
+          common=(
+            -std=c99
+            -O2
+            -Wall
+            -Wextra
+            -Werror
+            -I src
+            -I "$RG_CORE_DIR/src"
+          )
+          gcc "${common[@]}" tests/bench_rgs.c -lm -o "$output_dir/bench_rgs"
+          gcc "${common[@]}" tests/bench_rgs_stream.c -lm -o "$output_dir/bench_rgs_stream"
+          "$output_dir/bench_rgs" --iters 2
+          "$output_dir/bench_rgs_stream" --iters 2
+
+  sanitizers:
+    name: Linux / Clang ASan + UBSan + bounded fuzzing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      RG_CORE_DIR: ${{ github.workspace }}/_deps/rg_core
+
+    steps:
+      - name: Check out rg_audio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out pinned rg_core
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: superwendel/rg_core
+          ref: 27d5475a4af221813977f4b7d62e4e3f88cffab2
+          path: _deps/rg_core
+          persist-credentials: false
+
+      - name: Build and run sanitizer checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          output_dir="$RUNNER_TEMP/rg-audio-sanitize"
+          mkdir -p "$output_dir"
+          echo "SANITIZER_DIR=$output_dir" >> "$GITHUB_ENV"
+          common=(
+            -std=gnu11
+            -O1
+            -g
+            -Wall
+            -Wextra
+            -Werror
+            -fno-omit-frame-pointer
+            -fno-sanitize-recover=all
+            -fsanitize=address,undefined
+            -I src
+            -I "$RG_CORE_DIR/src"
+          )
+
+          for target in test_rgs test_rgs_allocator test_rgs_stream; do
+            clang "${common[@]}" "tests/$target.c" -lm -o "$output_dir/$target"
+          done
+
+          export ASAN_OPTIONS='detect_leaks=1:halt_on_error=1:strict_string_checks=1:exitcode=86'
+          export UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1:exitcode=87'
+          "$output_dir/test_rgs"
+          "$output_dir/test_rgs_allocator"
+          "$output_dir/test_rgs_stream"
+
+      - name: Build and exercise RGS fuzzer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$SANITIZER_DIR/crashes"
+          cp -R tests/fuzz_corpus "$SANITIZER_DIR/corpus"
+          clang -std=gnu11 -O1 -g -Wall -Wextra -Werror \
+            -fno-omit-frame-pointer -fno-sanitize-recover=all \
+            -fsanitize=fuzzer,address,undefined \
+            -I src -I "$RG_CORE_DIR/src" tests/fuzz_rgs.c -lm \
+            -o "$SANITIZER_DIR/fuzz_rgs"
+          export ASAN_OPTIONS='detect_leaks=1:halt_on_error=1:strict_string_checks=1'
+          export UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1'
+          "$SANITIZER_DIR/fuzz_rgs" "$SANITIZER_DIR/corpus" \
+            -max_total_time=30 \
+            -timeout=5 \
+            -rss_limit_mb=2048 \
+            -artifact_prefix="$SANITIZER_DIR/crashes/"
+
+      - name: Preserve fuzzer crash inputs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rg-audio-fuzzer-crashes-${{ github.run_id }}
+          path: ${{ runner.temp }}/rg-audio-sanitize/crashes
+          if-no-files-found: ignore
+          retention-days: 7
+
+  linux-player-compile:
+    name: Linux / GNU11 optional player compile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      RG_CORE_DIR: ${{ github.workspace }}/_deps/rg_core
+      RG_GUI_DIR: ${{ github.workspace }}/_deps/rg_gui
+      RG_TEXT_DIR: ${{ github.workspace }}/_deps/rg_text
+
+    steps:
+      - name: Check out rg_audio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out pinned rg_core
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: superwendel/rg_core
+          ref: 27d5475a4af221813977f4b7d62e4e3f88cffab2
+          path: _deps/rg_core
+          persist-credentials: false
+
+      - name: Check out pinned rg_gui
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: superwendel/rg_gui
+          ref: cf79949550c8cbecf7ed2e206e2b95e88c3ab09e
+          path: _deps/rg_gui
+          persist-credentials: false
+
+      - name: Check out pinned rg_text
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: superwendel/rg_text
+          ref: 0161dfd1790e9469a39c734fa61cb5640a36fd51
+          path: _deps/rg_text
+          persist-credentials: false
+
+      - name: Build pinned SDL3
+        id: sdl
+        uses: libsdl-org/setup-sdl@afd98199e97f9c2aa739474be7e0886d149a5e47 # Node 24 main, 2026-08-29
+        with:
+          version: 147a8ee32dbf9ac02f3794964490687b6bbda1bc # release-3.4.14
+          build-type: Release
+          install-linux-dependencies: true
+          add-to-environment: true
+
+      - name: Compile optional SDL3 tools without device execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          output_dir="$RUNNER_TEMP/rg-audio-player"
+          mkdir -p "$output_dir"
+          sdl_prefix='${{ steps.sdl.outputs.prefix }}'
+          export PKG_CONFIG_PATH="$sdl_prefix/lib/pkgconfig:$sdl_prefix/lib64/pkgconfig:$sdl_prefix/share/pkgconfig:${PKG_CONFIG_PATH:-}"
+          test -f "$sdl_prefix/include/SDL3/SDL.h"
+          read -r -a sdl_libs <<< "$(pkg-config --libs sdl3)"
+          common=(
+            -std=gnu11
+            -O2
+            -Wall
+            -Wextra
+            -Werror
+            -DRG_SPRINTF_NO_ASM
+            -I src
+            -I "$RG_CORE_DIR/src"
+            -isystem "$sdl_prefix/include"
+          )
+          player=(
+            "${common[@]}"
+            -I "$RG_GUI_DIR/src"
+            -I "$RG_TEXT_DIR/src"
+          )
+
+          gcc "${common[@]}" tools/rgs_convert.c "${sdl_libs[@]}" -lm \
+            -o "$output_dir/rgs_convert"
+          gcc "${common[@]}" tests/test_rgs_player_stream.c -lm \
+            -o "$output_dir/test_rgs_player_stream"
+          gcc "${player[@]}" tools/rgs_player.c "${sdl_libs[@]}" -lm \
+            -o "$output_dir/rgs_player"
+          echo 'The optional player and stream engine were compiled but no GPU or audio device was opened.'

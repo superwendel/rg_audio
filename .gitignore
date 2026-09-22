@@ -1,6 +1,16 @@
 # Prerequisites
 *.d
 
+# Local build and staged tool output
+/build/
+/shaders/Compiled/
+*.tmp.*
+*.rgs.tmp
+*.rgs.tmp-*
+*.wav.tmp
+/rgs_tool_*
+vcpkg_installed/
+
 # Object files
 *.o
 *.ko

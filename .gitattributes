@@ -1,0 +1,8 @@
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.font text eol=lf
+*.hlsl text eol=lf
+*.rgba binary
+*.rgba.b64 text eol=lf
+*.rgs binary
