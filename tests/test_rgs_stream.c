@@ -177,6 +177,21 @@ static void test_invalid_poison_and_trailing(void)
 
 	first_size = (uint32_t)encoded[RG_RGS_HEADER_SIZE + 6u] |
 	             ((uint32_t)encoded[RG_RGS_HEADER_SIZE + 7u] << 8u);
+	CHECK(!rg_rgs_decoder_init(&decoder, encoded,
+	    RG_RGS_HEADER_SIZE + RG_RGS_FRAME_HEADER_SIZE, NULL));
+	CHECK(decoder.failed);
+	CHECK(rg_rgs_decoder_next_s16(&decoder, frame,
+	    RG_RGS_MAX_FRAME_SAMPLES, &out_frames) == RG_RGS_DECODE_INVALID);
+	CHECK(out_frames == 0u);
+	CHECK(!rg_rgs_decoder_init(&decoder, encoded,
+	    RG_RGS_HEADER_SIZE + first_size - 1u, NULL));
+	/* Initialization proves the first frame, not the complete file. */
+	CHECK(rg_rgs_decoder_init(&decoder, encoded,
+	    RG_RGS_HEADER_SIZE + first_size, NULL));
+	CHECK(rg_rgs_decoder_next_s16(&decoder, frame,
+	    RG_RGS_MAX_FRAME_SAMPLES, &out_frames) == RG_RGS_DECODE_FRAME);
+	CHECK(rg_rgs_decoder_next_s16(&decoder, frame,
+	    RG_RGS_MAX_FRAME_SAMPLES, &out_frames) == RG_RGS_DECODE_INVALID);
 	memcpy(broken, encoded, encoded_size);
 	broken[RG_RGS_HEADER_SIZE + first_size + 6u] = 1u;
 	broken[RG_RGS_HEADER_SIZE + first_size + 7u] = 0u;

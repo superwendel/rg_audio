@@ -7,11 +7,10 @@ tag is published, the repository does not have a supported public release.
 
 ## Reporting a vulnerability
 
-Before the first public release, the maintainer must enable GitHub private
-vulnerability reporting for this repository. Publishing without that reporting
-channel is an unresolved release blocker.
+Use the repository's **Report a vulnerability** action to report security
+issues privately. If that action is unavailable, ask a maintainer for a
+private reporting channel without including vulnerability details.
 
-Once enabled, use the repository's **Report a vulnerability** action rather
-than opening a public issue. Include the affected version or commit, a minimal
-reproduction, and the expected impact when possible. Do not publish malformed
-stream samples or exploit details in an issue.
+Include the affected version or commit, a minimal reproduction, and the
+expected impact when possible. Do not publish malformed stream samples or
+exploit details in a public issue.

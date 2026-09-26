@@ -7,8 +7,7 @@ are to be interpreted as described by RFC 2119.
 RGS v1 is a lossy, framed encoding of interleaved signed 16-bit PCM. It uses a
 QOA-derived four-tap least-mean-squares (LMS) predictor and channel-planar
 compressed payloads. All multibyte integers are little-endian. A conforming v1
-decoder MUST reject every version byte other than `1`; laboratory RGS v2, v3,
-v4, and v13 and experimental RGSX v19 are not aliases for this format.
+decoder MUST reject every version byte other than `1`.
 
 ## Limits and terminology
 
@@ -23,10 +22,9 @@ v4, and v13 and experimental RGSX v19 are not aliases for this format.
 - The decoded sample order is frame-major interleaved PCM16: frame 0 channel 0,
   frame 0 channel 1, and so on.
 
-Encoders in this repository preserve input rates at or below 44.1 kHz. They
-low-pass filter and resample higher-rate input to 44.1 kHz before encoding.
-That encoder policy does not create an alternate wire profile: every stored
-frame still obeys the 44.1 kHz maximum above.
+The codec accepts input rates at or below 44.1 kHz and rejects higher rates.
+Higher-rate input must be low-pass filtered and resampled before encoding;
+the codec does not perform resampling.
 
 ## File header
 
@@ -256,14 +254,22 @@ whole-stream invariants:
 RGS v1 has no checksum or recovery marker. A container that concatenates or
 streams RGS objects MUST provide each complete object's exact byte boundary.
 
-## Canonical encoder behavior
+## Reference encoder behavior
 
-The reference encoder begins the first frame of every channel with histories
-`{0, 0, 0, 0}` and weights `{0, 0, -8192, 16384}`. Subsequent frame headers
-serialize the evolved state from the preceding frame. High quality writes
-planar fixed frames. Medium and low quality test 2-bit candidates and emit the
-smallest applicable planar mixed or all-2-bit representation; if no 2-bit
-candidate is accepted, they fall back to fixed.
+The reference encoder's initial search uses histories `{0, 0, 0, 0}` and
+weights `{0, 0, -8192, 16384}`, then carries the evolved state between frames.
+Prediction starts from the signed 16-bit state stored in each frame header.
+The encoder measures decoded error per frame and channel; difficult channels
+may be retried with another initial predictor state or slice-width policy.
+Only a retry with lower squared PCM error is retained, and its initial state
+is stored in the frame header. Decoders MUST use that stored state rather
+than assume continuity with a previous frame.
+
+High quality writes planar fixed 3-bit frames. Medium and low may also use
+2-bit slices. Uniform frames omit the mode map; mixed frames retain it even
+when the map makes the frame slightly larger than a fixed-width alternative.
+Encoder revisions may produce different valid bytes and reconstructed PCM
+without changing the v1 wire format.
 
 Quality choice and `target_kbps` affect encoder decisions, not the decoder or
 wire grammar. The hint is intentionally nonbinding and MUST NOT be recorded as

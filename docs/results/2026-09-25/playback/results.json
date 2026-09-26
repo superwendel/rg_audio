@@ -1,0 +1,570 @@
+{
+  "timestamp_utc": "2026-09-26T00:25:40Z",
+  "cpu": "12th Gen Intel(R) Core(TM) i7-12700KF",
+  "cpu_affinity": [
+    0
+  ],
+  "os": "Windows-11-10.0.26200-SP0",
+  "hashes": {
+    "build/bench/playback_resample.exe": "49f1ba94c47be9d350a6e23841ebe13bd40028ccdf6f8a4647ff95421cc200a8",
+    "benchmarks/run_playback_resample.py": "fa6c26949796b1c75bdf77066703c6e34faa532c4da3578b376716e2122890b5",
+    "benchmarks/playback_resample.c": "fa30110b3262c8608c816ab7de40ca1f2012b4021d16ef97173545706e79c793",
+    "SDL3-3.4.14/SDL3.dll": "9fa7bcb4c3667bfe4cf5e5b740a1da708151af0d499c2d0afee50c9874ba181c"
+  },
+  "scope": "Measure SDL's conversion of prepared PCM to 48 kHz without an audio device.",
+  "results": [
+    {
+      "sdl_version": 3004014,
+      "source_rate": 44100,
+      "device_rate": 48000,
+      "channels": 1,
+      "source_frames": 6821,
+      "input_block_frames": 128,
+      "warmups": 1,
+      "internal_peak_allocation_bytes": null,
+      "scope": "SDL AudioStream queue/conversion/drain; no device",
+      "trials": [
+        {
+          "trial": 0,
+          "init_ms": 0.0008,
+          "put_ms": 0.003,
+          "get_ms": 0.0406,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.0436,
+          "output_frames": 7425,
+          "first_output_input_frames": 128,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 1,
+          "init_ms": 0.0004,
+          "put_ms": 0.0027,
+          "get_ms": 0.0379,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 0.0407,
+          "output_frames": 7425,
+          "first_output_input_frames": 128,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 2,
+          "init_ms": 0.0007,
+          "put_ms": 0.007,
+          "get_ms": 0.0383,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.0453,
+          "output_frames": 7425,
+          "first_output_input_frames": 128,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 3,
+          "init_ms": 0.0003,
+          "put_ms": 0.0034,
+          "get_ms": 0.0408,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.0442,
+          "output_frames": 7425,
+          "first_output_input_frames": 128,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 4,
+          "init_ms": 0.0003,
+          "put_ms": 0.003,
+          "get_ms": 0.0407,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 0.0438,
+          "output_frames": 7425,
+          "first_output_input_frames": 128,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 5,
+          "init_ms": 0.0003,
+          "put_ms": 0.0032,
+          "get_ms": 0.0406,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 0.0439,
+          "output_frames": 7425,
+          "first_output_input_frames": 128,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 6,
+          "init_ms": 0.0002,
+          "put_ms": 0.0032,
+          "get_ms": 0.0408,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.044,
+          "output_frames": 7425,
+          "first_output_input_frames": 128,
+          "checksum": "bc5faeb9f41dbcfb"
+        }
+      ],
+      "input": "build/benchmark-results/prepared/0e702b233311a26ec61b.wav",
+      "input_sha256": "e0472289083c93ee009e0b3873e53e094c1386f56f44574075863d36fb60c546"
+    },
+    {
+      "sdl_version": 3004014,
+      "source_rate": 44100,
+      "device_rate": 48000,
+      "channels": 1,
+      "source_frames": 6821,
+      "input_block_frames": 256,
+      "warmups": 1,
+      "internal_peak_allocation_bytes": null,
+      "scope": "SDL AudioStream queue/conversion/drain; no device",
+      "trials": [
+        {
+          "trial": 0,
+          "init_ms": 0.0007,
+          "put_ms": 0.0021,
+          "get_ms": 0.0381,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.0402,
+          "output_frames": 7425,
+          "first_output_input_frames": 256,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 1,
+          "init_ms": 0.0004,
+          "put_ms": 0.002,
+          "get_ms": 0.0375,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.0395,
+          "output_frames": 7425,
+          "first_output_input_frames": 256,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 2,
+          "init_ms": 0.0006,
+          "put_ms": 0.0018,
+          "get_ms": 0.0347,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.0365,
+          "output_frames": 7425,
+          "first_output_input_frames": 256,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 3,
+          "init_ms": 0.0002,
+          "put_ms": 0.0016,
+          "get_ms": 0.0343,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 0.036,
+          "output_frames": 7425,
+          "first_output_input_frames": 256,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 4,
+          "init_ms": 0.0002,
+          "put_ms": 0.0012,
+          "get_ms": 0.0345,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 0.0358,
+          "output_frames": 7425,
+          "first_output_input_frames": 256,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 5,
+          "init_ms": 0.0002,
+          "put_ms": 0.0017,
+          "get_ms": 0.0373,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 0.0391,
+          "output_frames": 7425,
+          "first_output_input_frames": 256,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 6,
+          "init_ms": 0.0003,
+          "put_ms": 0.0013,
+          "get_ms": 0.0371,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 0.0385,
+          "output_frames": 7425,
+          "first_output_input_frames": 256,
+          "checksum": "bc5faeb9f41dbcfb"
+        }
+      ],
+      "input": "build/benchmark-results/prepared/0e702b233311a26ec61b.wav",
+      "input_sha256": "e0472289083c93ee009e0b3873e53e094c1386f56f44574075863d36fb60c546"
+    },
+    {
+      "sdl_version": 3004014,
+      "source_rate": 44100,
+      "device_rate": 48000,
+      "channels": 1,
+      "source_frames": 6821,
+      "input_block_frames": 512,
+      "warmups": 1,
+      "internal_peak_allocation_bytes": null,
+      "scope": "SDL AudioStream queue/conversion/drain; no device",
+      "trials": [
+        {
+          "trial": 0,
+          "init_ms": 0.0007,
+          "put_ms": 0.0015,
+          "get_ms": 0.0376,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 0.0392,
+          "output_frames": 7425,
+          "first_output_input_frames": 512,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 1,
+          "init_ms": 0.0005,
+          "put_ms": 0.001,
+          "get_ms": 0.0335,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.0345,
+          "output_frames": 7425,
+          "first_output_input_frames": 512,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 2,
+          "init_ms": 0.0008,
+          "put_ms": 0.0009,
+          "get_ms": 0.0334,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.0343,
+          "output_frames": 7425,
+          "first_output_input_frames": 512,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 3,
+          "init_ms": 0.0002,
+          "put_ms": 0.0008,
+          "get_ms": 0.0333,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 0.0342,
+          "output_frames": 7425,
+          "first_output_input_frames": 512,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 4,
+          "init_ms": 0.0001,
+          "put_ms": 0.0008,
+          "get_ms": 0.0332,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.034,
+          "output_frames": 7425,
+          "first_output_input_frames": 512,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 5,
+          "init_ms": 0.0002,
+          "put_ms": 0.0011,
+          "get_ms": 0.0332,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 0.0344,
+          "output_frames": 7425,
+          "first_output_input_frames": 512,
+          "checksum": "bc5faeb9f41dbcfb"
+        },
+        {
+          "trial": 6,
+          "init_ms": 0.0001,
+          "put_ms": 0.0011,
+          "get_ms": 0.0334,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 0.0345,
+          "output_frames": 7425,
+          "first_output_input_frames": 512,
+          "checksum": "bc5faeb9f41dbcfb"
+        }
+      ],
+      "input": "build/benchmark-results/prepared/0e702b233311a26ec61b.wav",
+      "input_sha256": "e0472289083c93ee009e0b3873e53e094c1386f56f44574075863d36fb60c546"
+    },
+    {
+      "sdl_version": 3004014,
+      "source_rate": 44100,
+      "device_rate": 48000,
+      "channels": 2,
+      "source_frames": 1984500,
+      "input_block_frames": 128,
+      "warmups": 1,
+      "internal_peak_allocation_bytes": null,
+      "scope": "SDL AudioStream queue/conversion/drain; no device",
+      "trials": [
+        {
+          "trial": 0,
+          "init_ms": 0.0027,
+          "put_ms": 0.9476,
+          "get_ms": 14.8135,
+          "flush_ms": 0.0005,
+          "conversion_total_ms": 15.7616,
+          "output_frames": 2160000,
+          "first_output_input_frames": 128,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 1,
+          "init_ms": 0.0025,
+          "put_ms": 0.9419,
+          "get_ms": 14.6049,
+          "flush_ms": 0.0004,
+          "conversion_total_ms": 15.5472,
+          "output_frames": 2160000,
+          "first_output_input_frames": 128,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 2,
+          "init_ms": 0.0026,
+          "put_ms": 0.9337,
+          "get_ms": 14.4633,
+          "flush_ms": 0.0004,
+          "conversion_total_ms": 15.3974,
+          "output_frames": 2160000,
+          "first_output_input_frames": 128,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 3,
+          "init_ms": 0.0031,
+          "put_ms": 0.9892,
+          "get_ms": 14.8855,
+          "flush_ms": 0.0003,
+          "conversion_total_ms": 15.875,
+          "output_frames": 2160000,
+          "first_output_input_frames": 128,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 4,
+          "init_ms": 0.0032,
+          "put_ms": 0.9387,
+          "get_ms": 14.4965,
+          "flush_ms": 0.0005,
+          "conversion_total_ms": 15.4357,
+          "output_frames": 2160000,
+          "first_output_input_frames": 128,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 5,
+          "init_ms": 0.0028,
+          "put_ms": 0.9804,
+          "get_ms": 14.4524,
+          "flush_ms": 0.0004,
+          "conversion_total_ms": 15.4332,
+          "output_frames": 2160000,
+          "first_output_input_frames": 128,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 6,
+          "init_ms": 0.0025,
+          "put_ms": 0.9886,
+          "get_ms": 15.1586,
+          "flush_ms": 0.0005,
+          "conversion_total_ms": 16.1477,
+          "output_frames": 2160000,
+          "first_output_input_frames": 128,
+          "checksum": "ab0cd1e5947cf20d"
+        }
+      ],
+      "input": "build/benchmark-results/prepared/f7191dad3efcb7c62c00.wav",
+      "input_sha256": "3d359d3c4d65d719598413d832044050b2fb6bab65c1f4daeb12fc09b01e7124"
+    },
+    {
+      "sdl_version": 3004014,
+      "source_rate": 44100,
+      "device_rate": 48000,
+      "channels": 2,
+      "source_frames": 1984500,
+      "input_block_frames": 256,
+      "warmups": 1,
+      "internal_peak_allocation_bytes": null,
+      "scope": "SDL AudioStream queue/conversion/drain; no device",
+      "trials": [
+        {
+          "trial": 0,
+          "init_ms": 0.0021,
+          "put_ms": 0.8199,
+          "get_ms": 12.8971,
+          "flush_ms": 0.0004,
+          "conversion_total_ms": 13.7174,
+          "output_frames": 2160000,
+          "first_output_input_frames": 256,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 1,
+          "init_ms": 0.003,
+          "put_ms": 0.838,
+          "get_ms": 12.9086,
+          "flush_ms": 0.0005,
+          "conversion_total_ms": 13.7471,
+          "output_frames": 2160000,
+          "first_output_input_frames": 256,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 2,
+          "init_ms": 0.0026,
+          "put_ms": 0.84,
+          "get_ms": 12.9873,
+          "flush_ms": 0.0004,
+          "conversion_total_ms": 13.8277,
+          "output_frames": 2160000,
+          "first_output_input_frames": 256,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 3,
+          "init_ms": 0.002,
+          "put_ms": 0.8302,
+          "get_ms": 12.8541,
+          "flush_ms": 0.0004,
+          "conversion_total_ms": 13.6847,
+          "output_frames": 2160000,
+          "first_output_input_frames": 256,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 4,
+          "init_ms": 0.0021,
+          "put_ms": 0.795,
+          "get_ms": 12.6923,
+          "flush_ms": 0.0003,
+          "conversion_total_ms": 13.4876,
+          "output_frames": 2160000,
+          "first_output_input_frames": 256,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 5,
+          "init_ms": 0.0022,
+          "put_ms": 0.7997,
+          "get_ms": 13.0171,
+          "flush_ms": 0.0004,
+          "conversion_total_ms": 13.8172,
+          "output_frames": 2160000,
+          "first_output_input_frames": 256,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 6,
+          "init_ms": 0.0019,
+          "put_ms": 0.821,
+          "get_ms": 13.4502,
+          "flush_ms": 0.0003,
+          "conversion_total_ms": 14.2715,
+          "output_frames": 2160000,
+          "first_output_input_frames": 256,
+          "checksum": "ab0cd1e5947cf20d"
+        }
+      ],
+      "input": "build/benchmark-results/prepared/f7191dad3efcb7c62c00.wav",
+      "input_sha256": "3d359d3c4d65d719598413d832044050b2fb6bab65c1f4daeb12fc09b01e7124"
+    },
+    {
+      "sdl_version": 3004014,
+      "source_rate": 44100,
+      "device_rate": 48000,
+      "channels": 2,
+      "source_frames": 1984500,
+      "input_block_frames": 512,
+      "warmups": 1,
+      "internal_peak_allocation_bytes": null,
+      "scope": "SDL AudioStream queue/conversion/drain; no device",
+      "trials": [
+        {
+          "trial": 0,
+          "init_ms": 0.0017,
+          "put_ms": 0.7834,
+          "get_ms": 12.0615,
+          "flush_ms": 0.0007,
+          "conversion_total_ms": 12.8456,
+          "output_frames": 2160000,
+          "first_output_input_frames": 512,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 1,
+          "init_ms": 0.0024,
+          "put_ms": 0.7641,
+          "get_ms": 11.8387,
+          "flush_ms": 0.0,
+          "conversion_total_ms": 12.6028,
+          "output_frames": 2160000,
+          "first_output_input_frames": 512,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 2,
+          "init_ms": 0.0017,
+          "put_ms": 0.7785,
+          "get_ms": 12.2144,
+          "flush_ms": 0.0002,
+          "conversion_total_ms": 12.9931,
+          "output_frames": 2160000,
+          "first_output_input_frames": 512,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 3,
+          "init_ms": 0.0021,
+          "put_ms": 0.7482,
+          "get_ms": 11.8321,
+          "flush_ms": 0.0001,
+          "conversion_total_ms": 12.5804,
+          "output_frames": 2160000,
+          "first_output_input_frames": 512,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 4,
+          "init_ms": 0.0018,
+          "put_ms": 0.7668,
+          "get_ms": 13.2111,
+          "flush_ms": 0.0003,
+          "conversion_total_ms": 13.9782,
+          "output_frames": 2160000,
+          "first_output_input_frames": 512,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 5,
+          "init_ms": 0.0025,
+          "put_ms": 0.8039,
+          "get_ms": 12.6406,
+          "flush_ms": 0.0004,
+          "conversion_total_ms": 13.4449,
+          "output_frames": 2160000,
+          "first_output_input_frames": 512,
+          "checksum": "ab0cd1e5947cf20d"
+        },
+        {
+          "trial": 6,
+          "init_ms": 0.0029,
+          "put_ms": 0.7747,
+          "get_ms": 12.4287,
+          "flush_ms": 0.0004,
+          "conversion_total_ms": 13.2038,
+          "output_frames": 2160000,
+          "first_output_input_frames": 512,
+          "checksum": "ab0cd1e5947cf20d"
+        }
+      ],
+      "input": "build/benchmark-results/prepared/f7191dad3efcb7c62c00.wav",
+      "input_sha256": "3d359d3c4d65d719598413d832044050b2fb6bab65c1f4daeb12fc09b01e7124"
+    }
+  ],
+  "publication_note": "Local invocation and installation details are omitted. Source paths are repository-relative; dependency paths identify the dependency. Artifact names identify local build outputs, which are not redistributed. Hashes identify measured bytes and may differ from current repository files. The retained baseline header has been relocated without changing its bytes."
+}

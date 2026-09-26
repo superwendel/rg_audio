@@ -12,6 +12,7 @@
 #endif
 
 #include "../src/rg_rgs.h"
+#include "rgs_audio_prepare.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -274,6 +275,8 @@ int main(int argc, char** argv)
 	RgRgsEncodeOptions options = rg_rgs_default_options();
 	size_t encoded_size = 0u;
 	int i;
+	RgsPreparedAudio prepared = {0};
+	const char* prepare_error;
 
 	if (argc < 3)
 	{
@@ -320,17 +323,24 @@ int main(int argc, char** argv)
 	{
 		return 1;
 	}
+	prepare_error = rgs_audio_prepare_s16(pcm, frames, channels, samplerate, &prepared);
+	free(pcm);
+	if (prepare_error != NULL)
+	{
+		fprintf(stderr, "PCM preparation failed for '%s': %s\n", input_path, prepare_error);
+		return 1;
+	}
 	if (!rgs_encode_file(output_path,
-	                     pcm,
-	                     frames,
-	                     channels,
-	                     samplerate,
+	                     prepared.pcm,
+	                     prepared.frames,
+	                     prepared.channels,
+	                     prepared.samplerate,
 	                     &options,
 	                     &info,
 	                     &encoded_size))
 	{
 		fprintf(stderr, "RGS encode failed for '%s'.\n", input_path);
-		free(pcm);
+		free(prepared.pcm);
 		return 1;
 	}
 
@@ -344,6 +354,6 @@ int main(int argc, char** argv)
 	       (double)encoded_size * 8.0 * (double)info.samplerate /
 	           ((double)info.samples * 1000.0));
 
-	free(pcm);
+	free(prepared.pcm);
 	return 0;
 }

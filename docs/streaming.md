@@ -53,13 +53,12 @@ The statuses have these state-transition rules:
 After `RG_RGS_DECODE_INVALID`, later `next` calls return invalid without
 reading more input. `rg_rgs_decoder_reset` rewinds to the first frame and
 clears that failure state while retaining the same borrowed source. Resetting
-does not make malformed bytes valid; it permits a caller to restart after an
-application-level cancellation or to reproduce a failure deterministically.
+does not make malformed bytes valid.
 
-`rg_rgs_decoder_init` validates the v1 file header and first-frame metadata.
-Each `next` call validates its complete frame. Reaching the declared sample
-count is not enough for `END`: the decoder also requires exact end of the
-borrowed buffer, so trailing data becomes `INVALID`.
+`rg_rgs_decoder_init` validates the v1 file header and the complete first-frame
+structure. Each `next` call validates its complete frame. Reaching the declared
+sample count is not enough for `END`: the decoder also requires exact end of
+the borrowed buffer, so trailing data becomes `INVALID`.
 
 ## Whole-file and trusted APIs
 
@@ -96,7 +95,11 @@ encoded RGS buffer (stable, read-only)
 
 Each slot needs
 `RG_RGS_MAX_FRAME_SAMPLES * channels * sizeof(int16_t)` bytes plus valid-frame
-and read-offset metadata. Prefill at least two slots before unpausing playback.
+and read-offset metadata. For continuing streams, prefill at least two slots
+before unpausing playback. A short one-shot may reach `RG_RGS_DECODE_END` with
+only one slot: start once all of its remaining PCM is queued instead of
+waiting for a second slot that cannot arrive. After its declared duration,
+retire the voice or output silence; reset only when looping is requested.
 The producer publishes a slot only after all PCM and metadata are written; the
 consumer releases it only after the last value is copied. Use platform atomics
 with acquire/release ordering, or an equivalently correct SPSC primitive.
@@ -104,13 +107,14 @@ with acquire/release ordering, or an equivalently correct SPSC primitive.
 The callback should not allocate, free, decode, open files, log, wait, or take a
 contended mutex. It should copy available PCM to the device stream and return.
 If no frame is ready, output silence and count an underrun; preserving the
-logical cursor makes recovery and A/B comparison deterministic.
+logical cursor at the next unconsumed PCM sample allows playback to resume
+when data becomes available.
 
 ## Loop, restart, and replacement
 
 At `RG_RGS_DECODE_END`, a loop worker may reset the decoder and continue
-filling slots. For gapless looping, the consumer timeline and any reference WAV
-must wrap at the same declared sample count.
+filling slots. For gapless looping, wrap the consumer timeline at the file's
+declared sample count.
 
 Replacing a track or restarting playback requires an ownership barrier:
 
@@ -129,11 +133,14 @@ nonblocking retries with a bounded scheduling yield.
 
 ## A/B comparison alignment
 
-For WAV/RGS comparison, normalize the reference WAV once to the RGS stored
-channel count, rate, and exact sample count. Maintain one common timeline. The
-RGS producer and consumer must continue to advance the compressed ring even
-while the WAV source is audible; otherwise switching sources compares different
-moments. A source toggle should not flush the queued device stream.
+For WAV/RGS comparison, use the exact prepared PCM passed to the encoder as
+the reference. The player and converter resample sources above 44.1 kHz;
+lower rates remain unchanged. The reference must have the same sample rate
+and sample count as the encoded input. Do not resample it a second time.
+Maintain one common timeline. The RGS producer and consumer must continue to
+advance the compressed ring even while the WAV source is audible; otherwise
+switching sources compares different moments. A source toggle should not flush
+the queued device stream.
 
 If either source underruns, emit silence without advancing the common timeline
 or consuming the other source. This keeps subsequent recovery sample-aligned.
@@ -150,4 +157,19 @@ at most:
 or 327,680 bytes at the eight-channel maximum, excluding small slot metadata.
 Applications can choose fewer slots to reduce memory, but must account for
 worker scheduling and device-buffer latency. Benchmark the copy and decode
-paths independently on the target hardware; see [benchmarks.md](benchmarks.md).
+paths independently on the target hardware. See [performance](performance.md)
+for measured results and [benchmarking](benchmarks.md) for reproduction.
+
+## Game integration boundaries
+
+The codec supports sequential resident-buffer decode and reset-to-start.
+It does not provide a file-read callback, a seek index, arbitrary loop-region
+metadata, or speaker-layout metadata for its 1-8 channel values. Those are
+application/container responsibilities.
+
+Budget rings per active streaming voice, not automatically per short effect.
+Four maximum-size stereo slots occupy 81,920 bytes; 128 such voices occupy
+10 MiB before state and shared compressed data. Short effects can instead be
+decoded once into caller-owned PCM. A frame's 5,120 samples span 116.1 ms at
+44.1 kHz, but this is decode granularity, not mandatory startup latency.
+Prefill and simultaneous-start costs should be measured outside the callback.

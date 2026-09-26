@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "timestamp_utc": "2026-09-26T11:00:43Z",
+  "cpu": "12th Gen Intel(R) Core(TM) i7-12700KF",
+  "cpu_affinity": [
+    0
+  ],
+  "os": "Windows-11-10.0.26200-SP0",
+  "trials": 1,
+  "minimum_batch_ms": 0.0,
+  "thresholds": {
+    "error_exceeds_signal_min_rms": 128,
+    "clip_burst_min_unexpected_full_scale": 4,
+    "clip_burst_max_snr_db": 10,
+    "large_error_min_peak": 16384,
+    "large_error_min_rms": 1024,
+    "frame_regression_min_sse_ratio": 2,
+    "frame_regression_min_rms": 128,
+    "file_regression_min_snr_drop_db": 0.25
+  },
+  "assets": 151,
+  "qualities": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "raw_trials": 906,
+  "frame_counts": {
+    "frame_channel_comparisons": 250710,
+    "individual_frame_channel_measurements": 501420,
+    "published_frame_channel_comparisons": 141
+  },
+  "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.44.35219 for x64",
+  "flags": "/nologo /std:c11 /W4 /WX /O2",
+  "link_libraries": [
+    "soxr.lib",
+    "sndfile.lib"
+  ],
+  "source_hashes": {
+    "candidate_executable": {
+      "sha256": "0654045d159bcd898de687092099899b1363aec744c5dbc0b12556b6082d147d"
+    },
+    "candidate_header": {
+      "sha256": "ecff374dd626bde76ad2e0b26c257b3b828949295ac6b3c838d53490de19f20e",
+      "source": "benchmarks/baselines/rg_rgs_2026_09_26_measured.h"
+    },
+    "adapter_source": {
+      "sha256": "91e86ae965907c7990ff8c3b7a5a69fc8f12cc0638da150ed9852de1e3fa0b97",
+      "source": "benchmarks/codec_adapter.c"
+    },
+    "runner_source": {
+      "sha256": "9810d85055e3601e882e0b9af90004a693003a273ed6b43e15b1cbc87d9302f3",
+      "source": "benchmarks/evaluate_encoder_quality.py"
+    },
+    "metric_source": {
+      "sha256": "05ccd5905f89dec7768f3cda1ffc6740a42eda0734378bb1e3dd6802f0c574c0",
+      "source": "benchmarks/run_benchmarks.py"
+    },
+    "archive": {
+      "sha256": "4d6f776bdf81e34b2cc92539bf3ec0d1b6f55c4a0c551b2699a21ceb65fe8a35"
+    },
+    "manifest": {
+      "sha256": "6252ecc8641745ce6654fde413510cfa3e4e279565f13dd9f5ab39b1c09e4f5c",
+      "source": "benchmarks/corpus_manifest.json"
+    },
+    "baseline_executable": {
+      "sha256": "c7a088b6f01e2c9a7d5ed198968fe31b303094966c7d8dfb83ef4e8356743670"
+    },
+    "baseline_header": {
+      "sha256": "c9b5543c51524c1b4ef0d4d2e84d16c3a439866e0f0d3fb11e7c40d3986363ae",
+      "source": "benchmarks/baselines/rg_rgs_2026_09_26_pre_quality.h"
+    }
+  },
+  "library_hashes": {
+    "sndfile.dll": "562749e1492446ccdc9e11c988d19d1228922b527a4185ad5e2a824ade60dba4",
+    "soxr.dll": "6b9f2e65735a6f49cd02707cfa44eddae1378cd487bd89bfba228650bf06e21f"
+  },
+  "timing_scope": "In-memory native encode/decode; preparation, file I/O, metrics, API-agreement checks and one warmup excluded. Encode aggregate fields sum per-file medians. These are screening timings.",
+  "quality_scope": "Whole-file and every codec-frame/channel, including partial tails. Numerical error/full-scale thresholds are not perceptual scores or a count of predictor saturation. FNV fingerprints are consistency checks, not cryptographic comparisons.",
+  "frame_selection": "All baseline/current severe or error-doubling rows, plus the 10 largest SSE increases per quality; no random sampling.",
+  "omitted_local_inputs": {
+    "results.json": {
+      "sha256": "12e8cfc350c536fee717a1efd037ccc96b68a493c4c2db47e92de0a2c6f7e0fe",
+      "bytes": 764636
+    },
+    "per_frame.csv": {
+      "sha256": "4b4c6ba93f735fb69b39e8efda1f36d778b213897f4fa56dc99aba30d6259d4f",
+      "bytes": 86734852
+    },
+    "frame_comparisons.csv": {
+      "sha256": "3ea119ab64643233e2c170a06212aa481f2cf003ecd2e5bc8a14bedca291374a",
+      "bytes": 50448125
+    }
+  },
+  "published_artifacts": {
+    "flagged_frames.csv.gz": {
+      "sha256": "012a367f062d8bf7269c56dcc3161fbf44ef5c22747cb0373233fa8ffeb32b56",
+      "bytes": 16174
+    },
+    "per_file.csv": {
+      "sha256": "cc8a8a91bff897ecff90ac150fbeee301f1ca46d1c8001cdd481367f0ca3e2a2",
+      "bytes": 207324
+    },
+    "raw.jsonl.gz": {
+      "sha256": "0b77b2fbc0ed7b518d535cdc530f7e06652e2e4864012c0e1f7d6ddc39a6acae",
+      "bytes": 56859
+    },
+    "totals.csv": {
+      "sha256": "02539b34ba1efb0f2be9703e5dffcb3590169654d65b23f86d9f609b5cd41fb8",
+      "bytes": 841
+    }
+  },
+  "release_header_provenance": {
+    "final_header": {
+      "source": "src/rg_rgs.h",
+      "sha256": "c815225f3124541c038b6d9249a1d65ddf78b22843de4133f05ab9da21d94afc"
+    },
+    "c_equivalence": {
+      "source": "benchmarks/baselines/rg_rgs_2026_09_26_c_equivalence.json",
+      "sha256": "70379eb813c962aa57bf937624698f5d8eddc123ae300372acfeced6b94584ec"
+    },
+    "scope": "The measured header remains the benchmark input. A C++-only initializer adjustment in the release header leaves both measured C translation units identical after the documented preprocessing normalization."
+  }
+}

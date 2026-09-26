@@ -11,7 +11,7 @@ distributed under the MIT license. The complete upstream copyright and license
 notice is reproduced in `src/rg_rgs.h` next to the derived implementation.
 
 The RGS container, frame ordering, mixed 2-bit/3-bit representation, quality
-selection, resampling, checked decoder, and streaming API are Reverse Gravity
+selection, checked decoder, and streaming API are Reverse Gravity
 work. The QOA notice still applies to the portions derived from QOA.
 
 ## QOA reference implementation
@@ -30,3 +30,19 @@ distributed under the SIL Open Font License 1.1, reproduced in
 `tools/assets/rgs_player/LICENSE-INTER.txt`. These assets and `rg_gui`,
 `rg_text`, SDL3, and SDL_shadercross are player/development dependencies, not
 RGS codec runtime dependencies.
+
+## Asset preprocessing and comparison libraries
+
+The optional converter, player, and corpus benchmark use libsoxr 0.1.3
+(https://github.com/chirlu/soxr), copyright Rob Sykes, under LGPL-2.1-or-later.
+The corpus benchmark uses libsndfile 1.2.2
+(https://github.com/libsndfile/libsndfile), copyright Erik de Castro Lopo and
+contributors, under LGPL-2.1-or-later. `tools/build_audio_deps.py` downloads
+hash-pinned upstream sources and builds shared libraries in ignored local
+storage. Their complete license texts remain in those source archives.
+Neither library is included in or required by `src/rg_rgs.h`.
+
+The QOA sample corpus has mixed provenance (Oculus Audio Pack, EBU SQAM, and
+artist excerpts). Only its manifest and measurements are tracked. Downloads
+and listening exports stay local; the QOA site's public availability is not
+represented as a blanket redistribution license.

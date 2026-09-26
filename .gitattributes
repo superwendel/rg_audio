@@ -6,3 +6,6 @@
 *.rgba binary
 *.rgba.b64 text eol=lf
 *.rgs binary
+
+# Preserve the exact input bytes hashed by the published corpus measurements.
+benchmarks/corpus_manifest.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

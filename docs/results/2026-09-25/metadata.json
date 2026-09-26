@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "timestamp_utc": "2026-09-25T22:27:34Z",
+  "cpu": "12th Gen Intel(R) Core(TM) i7-12700KF",
+  "logical_cpus": 20,
+  "cpu_affinity": [
+    0
+  ],
+  "os": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.3 (tags/v3.13.3:6280bb5, Apr  8 2025, 14:47:33) [MSC v.1943 64 bit (AMD64)]",
+  "numpy": "2.4.1",
+  "git_head": "af980e88b3e5c138bd5d9430e8d4da5beb654643",
+  "trials": 7,
+  "minimum_batch_ms": 10,
+  "hashes": {
+    "candidate_executable": {
+      "path": "build/bench/codec_candidate.exe",
+      "sha256": "c541cc613341626e8505f8afa66c2f0ca9b4d5416780c5549922e07b692dd9a9"
+    },
+    "manifest": {
+      "path": "benchmarks/corpus_manifest.json",
+      "sha256": "6252ecc8641745ce6654fde413510cfa3e4e279565f13dd9f5ab39b1c09e4f5c"
+    },
+    "candidate_header": {
+      "path": "src/rg_rgs.h",
+      "sha256": "b26f6be89db4fe6cfbbd6cab95e6c69ff986850673e48317390867b75c36702e"
+    },
+    "qoa_header": {
+      "path": "third_party/qoa/qoa.h",
+      "sha256": "43ae6aced86effecb5addeae500f6fdadd6cfc7412cb91018962a2318bab6f16"
+    },
+    "adapter_source": {
+      "path": "benchmarks/codec_adapter.c",
+      "sha256": "43a3f9e84f951a12e9aa67885b2e0fd96c2b2c748065b4515af8b7c9946bbcf9"
+    },
+    "runner_source": {
+      "path": "benchmarks/run_benchmarks.py",
+      "sha256": "b4e89cbed4f577ba8c1789c1ef796efef35b192d4f3d6a20cd2d150a3cb94089"
+    },
+    "prepare_header": {
+      "path": "tools/rgs_audio_prepare.h",
+      "sha256": "62e85b4941835adc98e394c2b80e16e7e456662f5d88305dedcf95207821183b"
+    },
+    "baseline_executable": {
+      "path": "build/bench/codec_baseline.exe",
+      "sha256": "922a362e29d6498607c2e4cbae8c13631dbdbce7586cb1f3af1ed52bc541b945"
+    },
+    "baseline_header": {
+      "path": "build/baseline/src/rg_rgs.h",
+      "sha256": "a7d43578a678d0489cfa3b8e84ea62da4f6a83c17a5c7b7395a897ff5311ff21"
+    }
+  },
+  "library_hashes": {
+    "sndfile.dll": "562749e1492446ccdc9e11c988d19d1228922b527a4185ad5e2a824ade60dba4",
+    "soxr.dll": "6b9f2e65735a6f49cd02707cfa44eddae1378cd487bd89bfba228650bf06e21f",
+    "sndfile.lib": "ab946fa1f4e9f62e3106a4ab0af6376f5cbba97b02b9463236d6e2fbb93583f9",
+    "soxr.lib": "22eeeac40de74104057571ff939ed9da8fc0f1110356bc9a9b6c92173513dc0f"
+  },
+  "timing_scope": "Native in-memory whole-asset operations; input loading, shared preparation and output I/O excluded. RGS/QOA reuse output buffers. libsndfile PCM/IMA includes library open/close and its internal allocations.",
+  "statistics": "Per-file p95/p99 are quantiles across trial batch means, not callback tail latency. Category times sum per-file medians.",
+  "quality_note": "SNR/segmental SNR/spectral error are diagnostics, not perceptual rankings. Exported PCM16 WAV files support listening comparisons.",
+  "build": {
+    "compiler": "MSVC 19.44.35219 for x64",
+    "flags": "/std:c11 /W4 /WX /O2 (baseline additionally selects frozen header)",
+    "link": "soxr.lib sndfile.lib; shared libraries",
+    "os": "Windows-11-10.0.26200-SP0",
+    "candidate_base_revision": "af980e88b3e5c138bd5d9430e8d4da5beb654643",
+    "baseline_revision": "af980e8",
+    "sha256": {
+      "src/rg_rgs.h": "b26f6be89db4fe6cfbbd6cab95e6c69ff986850673e48317390867b75c36702e",
+      "build/baseline/src/rg_rgs.h": "a7d43578a678d0489cfa3b8e84ea62da4f6a83c17a5c7b7395a897ff5311ff21",
+      "benchmarks/codec_adapter.c": "43a3f9e84f951a12e9aa67885b2e0fd96c2b2c748065b4515af8b7c9946bbcf9",
+      "tools/rgs_audio_prepare.h": "62e85b4941835adc98e394c2b80e16e7e456662f5d88305dedcf95207821183b",
+      "third_party/qoa/qoa.h": "43ae6aced86effecb5addeae500f6fdadd6cfc7412cb91018962a2318bab6f16",
+      "rg_core/src/rg_time.h": "94554d144d175b19b08bef87d4936ecdfa681ad4cd7b2edac76fa5660f2c91a5",
+      "build/bench/codec_candidate.exe": "c541cc613341626e8505f8afa66c2f0ca9b4d5416780c5549922e07b692dd9a9",
+      "build/bench/codec_baseline.exe": "922a362e29d6498607c2e4cbae8c13631dbdbce7586cb1f3af1ed52bc541b945",
+      "sndfile.dll": "562749e1492446ccdc9e11c988d19d1228922b527a4185ad5e2a824ade60dba4",
+      "soxr.dll": "6b9f2e65735a6f49cd02707cfa44eddae1378cd487bd89bfba228650bf06e21f"
+    },
+    "tool_dependencies": [
+      {
+        "name": "soxr",
+        "version": "0.1.3",
+        "url": "https://codeload.github.com/chirlu/soxr/tar.gz/refs/tags/0.1.3",
+        "sha256": "db6ca1b1e8405c6ef92f8294fc123d910abf0a114003b3f0f13fa57a95fd62d0"
+      },
+      {
+        "name": "libsndfile",
+        "version": "1.2.2",
+        "url": "https://codeload.github.com/libsndfile/libsndfile/tar.gz/refs/tags/1.2.2",
+        "sha256": "ffe12ef8add3eaca876f04087734e6e8e029350082f3251f565fa9da55b52121"
+      }
+    ]
+  },
+  "publication_note": "Local invocation and installation details are omitted. Source paths are repository-relative; dependency paths identify the dependency. Artifact names identify local build outputs, which are not redistributed. Hashes identify measured bytes and may differ from current repository files. The retained baseline header has been relocated without changing its bytes."
+}

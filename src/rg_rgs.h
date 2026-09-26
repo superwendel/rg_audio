@@ -5,8 +5,8 @@
  * rg_rgs - RGS (Reverse Gravity Signal) PCM16 audio codec
  *
  * Public v1 is a little-endian, frame-oriented, QOA-derived format. Encoding
- * may allocate only when input above 44100 Hz must be resampled. Header,
- * whole-file, trusted, and streaming decoding are allocation-free.
+ * and all decoding are allocation-free. Input rates above 44100 Hz must be
+ * resampled by the caller before encoding.
  *
  * This implementation derives its LMS predictor, quantizer tables, and slice
  * coding approach from Quite OK Audio (QOA):
@@ -42,16 +42,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#if defined(RG_RGS_MALLOC) && !defined(RG_RGS_FREE)
-#error "RG_RGS_MALLOC and RG_RGS_FREE must be defined together"
-#elif !defined(RG_RGS_MALLOC) && defined(RG_RGS_FREE)
-#error "RG_RGS_MALLOC and RG_RGS_FREE must be defined together"
-#elif !defined(RG_RGS_MALLOC)
-#include <stdlib.h>
-#define RG_RGS_MALLOC(size) malloc(size)
-#define RG_RGS_FREE(ptr) free(ptr)
-#endif
-
 /** @name Public format limits
  * @{ */
 /** Current and only accepted RGS wire-format version. */
@@ -63,7 +53,7 @@
 /** Maximum supported channel count. */
 #define RG_RGS_MAX_CHANNELS 8u
 /** Maximum accepted input sample rate. */
-#define RG_RGS_MAX_SAMPLERATE 16777215u
+#define RG_RGS_MAX_SAMPLERATE 44100u
 /** Normative maximum rate stored in an RGS v1 stream. */
 #define RG_RGS_MAX_STORED_SAMPLERATE 44100u
 /** Maximum decoded sample frames returned by one streaming call. */
@@ -157,7 +147,7 @@ RGINLINE RgRgsEncodeOptions rg_rgs_default_options(void);
  */
 RGINLINE size_t rg_rgs_encode_bound(uint32_t samples, uint32_t channels, uint32_t samplerate);
 
-/** Encode interleaved PCM16 using default options. */
+/** Encode interleaved PCM16 at 1..44100 Hz using default options. No allocation. */
 RGINLINE size_t rg_rgs_encode_s16(const int16_t* pcm,
                                   uint32_t samples,
                                   uint32_t channels,
@@ -165,7 +155,7 @@ RGINLINE size_t rg_rgs_encode_s16(const int16_t* pcm,
                                   void* dst,
                                   size_t dst_size);
 
-/** Encode interleaved PCM16 using explicit options. */
+/** Encode interleaved PCM16 at 1..44100 Hz using explicit options. No allocation. */
 RGINLINE size_t rg_rgs_encode_s16_ex(const int16_t* pcm,
                                      uint32_t samples,
                                      uint32_t channels,
@@ -174,7 +164,7 @@ RGINLINE size_t rg_rgs_encode_s16_ex(const int16_t* pcm,
                                      size_t dst_size,
                                      const RgRgsEncodeOptions* options);
 
-/** Read and validate the v1 file header and first-frame metadata. */
+/** Read and validate the v1 file header and complete first-frame structure. */
 RGINLINE int rg_rgs_read_header(const void* src, size_t src_size, RgRgsInfo* out_info);
 
 /**
@@ -372,25 +362,27 @@ RGINLINE int rg_rgs_clamp(int v, int min_v, int max_v)
 
 RGINLINE int rg_rgs_clamp_s16(int v)
 {
-	if (v < -32768)
+	/* The common in-range case needs one comparison. Add after converting
+	 * to unsigned so even INT_MIN/INT_MAX cannot overflow signed arithmetic. */
+	if ((unsigned int)v + 32768u > 65535u)
 	{
-		return -32768;
-	}
-	if (v > 32767)
-	{
-		return 32767;
+		return v < 0 ? -32768 : 32767;
 	}
 	return v;
 }
 
 RGINLINE int64_t rg_rgs_floor_div_pow2_i64(int64_t value, uint32_t shift)
 {
-	int64_t divisor = (int64_t)1 << shift;
-	if (value >= 0)
+	/* Defined for shifts 0..63, including INT64_MIN. Bias the signed range
+	 * into unsigned order, divide there, then remove the divided bias.
+	 * For a positive shift the quotient fits int64_t before conversion.
+	 * This avoids a sample-dependent branch and negative signed shifts. */
+	if (shift == 0u)
 	{
-		return value / divisor;
+		return value;
 	}
-	return -(((-value) + divisor - 1) / divisor);
+	return (int64_t)(((uint64_t)value ^ (UINT64_C(1) << 63u)) >> shift) -
+	       (INT64_C(1) << (63u - shift));
 }
 
 RGINLINE int rg_rgs_lms_predict(const RgRgsLms* lms)
@@ -423,76 +415,6 @@ RGINLINE int rg_rgs_div(int v, int scalefactor)
 	int n = (int)rg_rgs_floor_div_pow2_i64((int64_t)v * reciprocal + ((int64_t)1 << 15), 16u);
 	n = n + ((v > 0) - (v < 0)) - ((n > 0) - (n < 0));
 	return n;
-}
-
-RGINLINE uint32_t rg_rgs_stored_samplerate(uint32_t samplerate)
-{
-	return samplerate > RG_RGS_MAX_STORED_SAMPLERATE ? RG_RGS_MAX_STORED_SAMPLERATE : samplerate;
-}
-
-RGINLINE uint32_t rg_rgs_stored_samples(uint32_t samples, uint32_t samplerate)
-{
-	uint32_t stored_samplerate = rg_rgs_stored_samplerate(samplerate);
-	if (stored_samplerate == samplerate)
-	{
-		return samples;
-	}
-	return (uint32_t)(((uint64_t)samples * (uint64_t)stored_samplerate + (uint64_t)samplerate - 1u) /
-	                  (uint64_t)samplerate);
-}
-
-RGINLINE int16_t rg_rgs_sample_smoothed(const int16_t* pcm,
-                                        uint32_t samples,
-                                        uint32_t channels,
-                                        uint32_t sample_index,
-                                        uint32_t channel)
-{
-	int64_t acc = 0;
-	static const int weights[5] = {1, 2, 3, 2, 1};
-	for (int i = -2; i <= 2; i++)
-	{
-		int64_t idx = (int64_t)sample_index + i;
-		if (idx < 0)
-		{
-			idx = 0;
-		}
-		if ((uint64_t)idx >= samples)
-		{
-			idx = (int64_t)samples - 1;
-		}
-		acc += (int64_t)pcm[(size_t)idx * channels + channel] * weights[i + 2];
-	}
-	return (int16_t)(acc / 9);
-}
-
-RGINLINE void rg_rgs_resample_to_target(const int16_t* src,
-                                        uint32_t src_samples,
-                                        uint32_t channels,
-                                        uint32_t src_rate,
-                                        int16_t* dst,
-                                        uint32_t dst_samples)
-{
-	for (uint32_t i = 0u; i < dst_samples; i++)
-	{
-		uint64_t pos_num = (uint64_t)i * (uint64_t)src_rate;
-		uint32_t idx = (uint32_t)(pos_num / RG_RGS_MAX_STORED_SAMPLERATE);
-		uint32_t frac = (uint32_t)(pos_num % RG_RGS_MAX_STORED_SAMPLERATE);
-		if (idx >= src_samples)
-		{
-			idx = src_samples - 1u;
-			frac = 0u;
-		}
-
-		uint32_t next = idx + 1u < src_samples ? idx + 1u : idx;
-		for (uint32_t c = 0u; c < channels; c++)
-		{
-			int a = rg_rgs_sample_smoothed(src, src_samples, channels, idx, c);
-			int b = rg_rgs_sample_smoothed(src, src_samples, channels, next, c);
-			int64_t blended = (int64_t)a * (int64_t)(RG_RGS_MAX_STORED_SAMPLERATE - frac) +
-			                  (int64_t)b * (int64_t)frac;
-			dst[(size_t)i * channels + c] = (int16_t)(blended / RG_RGS_MAX_STORED_SAMPLERATE);
-		}
-	}
 }
 
 RGINLINE int rg_rgs_valid_desc(uint32_t samples, uint32_t channels, uint32_t samplerate)
@@ -814,68 +736,6 @@ RGINLINE size_t rg_rgs_encode_frame_planar_fixed(const int16_t* sample_data,
 	return p;
 }
 
-RGINLINE size_t rg_rgs_encode_frame_planar_all2(const int16_t* sample_data,
-                                                uint32_t channels,
-                                                uint32_t samplerate,
-                                                uint32_t frame_len,
-                                                RgRgsLms* lms,
-                                                uint8_t* bytes)
-{
-	uint32_t slices = (frame_len + RG_RGS_SLICE_LEN - 1u) / RG_RGS_SLICE_LEN;
-	size_t frame_size = RG_RGS_FRAME_HEADER_SIZE + RG_RGS_LMS_LEN * 4u * channels +
-	                    6u * (size_t)slices * channels;
-	size_t p = 0u;
-	int prev_scalefactor[RG_RGS_MAX_CHANNELS] = {0};
-
-	bytes[p++] = (uint8_t)(channels | ((RG_RGS_FRAME_FLAG_PLANAR | RG_RGS_FRAME_FLAG_ALL_2BIT) << 4u));
-	rg_rgs_write_u24le(bytes + p, samplerate);
-	p += 3u;
-	rg_rgs_write_u16le(bytes + p, (uint16_t)frame_len);
-	p += 2u;
-	rg_rgs_write_u16le(bytes + p, (uint16_t)frame_size);
-	p += 2u;
-
-	for (uint32_t c = 0u; c < channels; c++)
-	{
-		for (uint32_t i = 0u; i < RG_RGS_LMS_LEN; i++)
-		{
-			rg_rgs_write_u16le(bytes + p, (uint16_t)((uint32_t)lms[c].history[i] & 0xffffu));
-			p += 2u;
-		}
-		for (uint32_t i = 0u; i < RG_RGS_LMS_LEN; i++)
-		{
-			rg_rgs_write_u16le(bytes + p, (uint16_t)((uint32_t)lms[c].weights[i] & 0xffffu));
-			p += 2u;
-		}
-	}
-
-	for (uint32_t c = 0u; c < channels; c++)
-	{
-		for (uint32_t sample_index = 0u; sample_index < frame_len; sample_index += RG_RGS_SLICE_LEN)
-		{
-			uint32_t slice_len = frame_len - sample_index;
-			if (slice_len > RG_RGS_SLICE_LEN)
-			{
-				slice_len = RG_RGS_SLICE_LEN;
-			}
-
-			RgRgsSliceCandidate slice2 = rg_rgs_encode_slice2(sample_data,
-			                                                  channels,
-			                                                  sample_index,
-			                                                  slice_len,
-			                                                  c,
-			                                                  &lms[c],
-			                                                  prev_scalefactor[c]);
-			rg_rgs_write_u48le(bytes + p, slice2.bits);
-			p += 6u;
-			lms[c] = slice2.lms;
-			prev_scalefactor[c] = (int)(slice2.bits & 0xfu);
-		}
-	}
-
-	return p;
-}
-
 RGINLINE size_t rg_rgs_encode_frame_planar_mixed(const int16_t* sample_data,
                                                  uint32_t channels,
                                                  uint32_t samplerate,
@@ -969,15 +829,21 @@ RGINLINE size_t rg_rgs_encode_frame_planar_mixed(const int16_t* sample_data,
 		}
 	}
 
-	if (two_bit_count == 0u || p >= fixed_size)
+	if (two_bit_count == 0u || two_bit_count == (size_t)slices * channels)
+	{
+		/* The chosen payload and final LMS state already match the fixed-width
+		 * representation. Only the now-redundant mode maps need removing. */
+		size_t map_size = (size_t)channels * mode_bytes;
+		memmove(bytes + mode_map_start, bytes + mode_map_start + map_size,
+		        p - mode_map_start - map_size);
+		p -= map_size;
+		bytes[0] = (uint8_t)(channels | ((RG_RGS_FRAME_FLAG_PLANAR |
+		    (two_bit_count != 0u ? RG_RGS_FRAME_FLAG_ALL_2BIT : 0u)) << 4u));
+	}
+	else if (p >= fixed_size)
 	{
 		memcpy(lms, initial_lms, sizeof(RgRgsLms) * channels);
 		return rg_rgs_encode_frame_planar_fixed(sample_data, channels, samplerate, frame_len, lms, bytes);
-	}
-	if (two_bit_count == (size_t)slices * channels)
-	{
-		memcpy(lms, initial_lms, sizeof(RgRgsLms) * channels);
-		return rg_rgs_encode_frame_planar_all2(sample_data, channels, samplerate, frame_len, lms, bytes);
 	}
 
 	rg_rgs_write_u16le(bytes + 6u, (uint16_t)p);
@@ -994,19 +860,108 @@ RGINLINE void rg_rgs_decode_packed_slice(uint64_t slice,
                                          uint32_t slice_len)
 {
 	int scalefactor = (int)(slice & 0xfu);
-	uint32_t bitpos = 4u;
-	uint32_t mask = bits_per_sample == 3u ? 7u : 3u;
-
-	for (uint32_t si = 0u; si < slice_len; si++)
+	int16_t* out = dst + (size_t)sample_index * channels + c;
+#if defined(_MSC_VER) && !defined(__clang__) && defined(_M_X64)
+	/* Keep the four taps in local wide scalars for the whole slice. Besides
+	 * avoiding repeated state loads/stores, this avoids sign-extending each
+	 * tap before every wide multiply. Frame headers reset the weights, so
+	 * their magnitude stays <= 32768 + 5120 * 896 = 4620288. The wide dot
+	 * product remains necessary for arbitrary valid serialized states. */
+	int64_t h0 = lms->history[0];
+	int64_t h1 = lms->history[1];
+	int64_t h2 = lms->history[2];
+	int64_t h3 = lms->history[3];
+	int64_t w0 = lms->weights[0];
+	int64_t w1 = lms->weights[1];
+	int64_t w2 = lms->weights[2];
+	int64_t w3 = lms->weights[3];
+	slice >>= 4u;
+	/* Select the table and constant shift once per slice, outside the LMS
+	 * dependency chain. Both paths use the same defined wide arithmetic. */
+	if (bits_per_sample == 3u)
 	{
-		int predicted = rg_rgs_lms_predict(lms);
-		int quantized = (int)((slice >> bitpos) & mask);
-		int dequantized = bits_per_sample == 3u ? rg_rgs_dequant_tab[scalefactor][quantized] : rg_rgs_dequant2_tab[scalefactor][quantized];
-		int reconstructed = rg_rgs_clamp_s16(predicted + dequantized);
-		dst[(sample_index + si) * channels + c] = (int16_t)reconstructed;
-		bitpos += bits_per_sample;
-		rg_rgs_lms_update(lms, reconstructed, dequantized);
+		const int* dequant = rg_rgs_dequant_tab[scalefactor];
+		for (uint32_t si = 0u; si < slice_len; si++)
+		{
+			int64_t prediction = w0 * h0 + w1 * h1 + w2 * h2 + w3 * h3;
+			int predicted = (int)rg_rgs_floor_div_pow2_i64(prediction, 13u);
+			int dequantized = dequant[slice & 7u];
+			int reconstructed = rg_rgs_clamp_s16(predicted + dequantized);
+			int delta = (int)rg_rgs_floor_div_pow2_i64(dequantized, 4u);
+			out[(size_t)si * channels] = (int16_t)reconstructed;
+			slice >>= 3u;
+			w0 += h0 < 0 ? -delta : delta;
+			w1 += h1 < 0 ? -delta : delta;
+			w2 += h2 < 0 ? -delta : delta;
+			w3 += h3 < 0 ? -delta : delta;
+			h0 = h1;
+			h1 = h2;
+			h2 = h3;
+			h3 = reconstructed;
+		}
 	}
+	else
+	{
+		const int* dequant = rg_rgs_dequant2_tab[scalefactor];
+		for (uint32_t si = 0u; si < slice_len; si++)
+		{
+			int64_t prediction = w0 * h0 + w1 * h1 + w2 * h2 + w3 * h3;
+			int predicted = (int)rg_rgs_floor_div_pow2_i64(prediction, 13u);
+			int dequantized = dequant[slice & 3u];
+			int reconstructed = rg_rgs_clamp_s16(predicted + dequantized);
+			int delta = (int)rg_rgs_floor_div_pow2_i64(dequantized, 4u);
+			out[(size_t)si * channels] = (int16_t)reconstructed;
+			slice >>= 2u;
+			w0 += h0 < 0 ? -delta : delta;
+			w1 += h1 < 0 ? -delta : delta;
+			w2 += h2 < 0 ? -delta : delta;
+			w3 += h3 < 0 ? -delta : delta;
+			h0 = h1;
+			h1 = h2;
+			h2 = h3;
+			h3 = reconstructed;
+		}
+	}
+	lms->history[0] = (int)h0;
+	lms->history[1] = (int)h1;
+	lms->history[2] = (int)h2;
+	lms->history[3] = (int)h3;
+	lms->weights[0] = (int)w0;
+	lms->weights[1] = (int)w1;
+	lms->weights[2] = (int)w2;
+	lms->weights[3] = (int)w3;
+#else
+	/* Keep the array form on other compilers: LLVM can vectorize all four
+	 * weight updates together, while explicit wide scalars prevent that.
+	 * Both kernels retain wide products and exactly the same LMS updates. */
+	slice >>= 4u;
+	if (bits_per_sample == 3u)
+	{
+		const int* dequant = rg_rgs_dequant_tab[scalefactor];
+		for (uint32_t si = 0u; si < slice_len; si++)
+		{
+			int predicted = rg_rgs_lms_predict(lms);
+			int dequantized = dequant[slice & 7u];
+			int reconstructed = rg_rgs_clamp_s16(predicted + dequantized);
+			out[(size_t)si * channels] = (int16_t)reconstructed;
+			slice >>= 3u;
+			rg_rgs_lms_update(lms, reconstructed, dequantized);
+		}
+	}
+	else
+	{
+		const int* dequant = rg_rgs_dequant2_tab[scalefactor];
+		for (uint32_t si = 0u; si < slice_len; si++)
+		{
+			int predicted = rg_rgs_lms_predict(lms);
+			int dequantized = dequant[slice & 3u];
+			int reconstructed = rg_rgs_clamp_s16(predicted + dequantized);
+			out[(size_t)si * channels] = (int16_t)reconstructed;
+			slice >>= 2u;
+			rg_rgs_lms_update(lms, reconstructed, dequantized);
+		}
+	}
+#endif
 }
 
 typedef struct RgRgsFrameMeta
@@ -1146,7 +1101,179 @@ RGINLINE int rg_rgs_parse_frame(const uint8_t* bytes,
 	return 1;
 }
 
+#if defined(_MSC_VER) && !defined(__clang__) && defined(_M_X64)
+/* Overwrite the oldest physical history value after each sample. Passing
+ * the histories in rotated order restores their logical order after four
+ * samples, avoiding three history moves per sample in the main loop.
+ * Prediction, weight updates, and floor division keep the same wide,
+ * defined arithmetic and update order as the scalar decoder above. */
+#define RG_RGS_MONO_STEP(H0, H1, H2, H3, WIDTH, MASK)                                           \
+	do                                                                                        \
+	{                                                                                         \
+		int64_t prediction = w0 * (H0) + w1 * (H1) + w2 * (H2) + w3 * (H3);                   \
+		int residual = dequant[slice & (MASK)];                                                \
+		int reconstructed = rg_rgs_clamp_s16(                                                 \
+		    (int)rg_rgs_floor_div_pow2_i64(prediction, 13u) + residual);                        \
+		int64_t delta = (int)rg_rgs_floor_div_pow2_i64(residual, 4u);                           \
+		*out++ = (int16_t)reconstructed;                                                       \
+		slice >>= (WIDTH);                                                                    \
+		w0 += (H0) < 0 ? -delta : delta;                                                       \
+		w1 += (H1) < 0 ? -delta : delta;                                                       \
+		w2 += (H2) < 0 ? -delta : delta;                                                       \
+		w3 += (H3) < 0 ? -delta : delta;                                                       \
+		(H0) = reconstructed;                                                                \
+	} while (0)
+
+RGINLINE void rg_rgs_decode_packed_slice_mono(uint64_t slice,
+                                              uint32_t bits_per_sample,
+                                              RgRgsLms* lms,
+                                              int16_t* dst,
+                                              uint32_t sample_index,
+                                              uint32_t slice_len)
+{
+	int scalefactor = (int)(slice & 15u);
+	int16_t* out = dst + sample_index;
+	int64_t h0 = lms->history[0];
+	int64_t h1 = lms->history[1];
+	int64_t h2 = lms->history[2];
+	int64_t h3 = lms->history[3];
+	int64_t w0 = lms->weights[0];
+	int64_t w1 = lms->weights[1];
+	int64_t w2 = lms->weights[2];
+	int64_t w3 = lms->weights[3];
+	uint32_t si = 0;
+	slice >>= 4u;
+	if (bits_per_sample == 3u)
+	{
+		const int* dequant = rg_rgs_dequant_tab[scalefactor];
+		for (; si + 4u <= slice_len; si += 4u)
+		{
+			RG_RGS_MONO_STEP(h0, h1, h2, h3, 3u, 7u);
+			RG_RGS_MONO_STEP(h1, h2, h3, h0, 3u, 7u);
+			RG_RGS_MONO_STEP(h2, h3, h0, h1, 3u, 7u);
+			RG_RGS_MONO_STEP(h3, h0, h1, h2, 3u, 7u);
+		}
+		for (; si < slice_len; ++si)
+		{
+			int64_t tail;
+			RG_RGS_MONO_STEP(h0, h1, h2, h3, 3u, 7u);
+			tail = h0;
+			h0 = h1;
+			h1 = h2;
+			h2 = h3;
+			h3 = tail;
+		}
+	}
+	else
+	{
+		const int* dequant = rg_rgs_dequant2_tab[scalefactor];
+		for (; si + 4u <= slice_len; si += 4u)
+		{
+			RG_RGS_MONO_STEP(h0, h1, h2, h3, 2u, 3u);
+			RG_RGS_MONO_STEP(h1, h2, h3, h0, 2u, 3u);
+			RG_RGS_MONO_STEP(h2, h3, h0, h1, 2u, 3u);
+			RG_RGS_MONO_STEP(h3, h0, h1, h2, 2u, 3u);
+		}
+		for (; si < slice_len; ++si)
+		{
+			int64_t tail;
+			RG_RGS_MONO_STEP(h0, h1, h2, h3, 2u, 3u);
+			tail = h0;
+			h0 = h1;
+			h1 = h2;
+			h2 = h3;
+			h3 = tail;
+		}
+	}
+	lms->history[0] = (int)h0;
+	lms->history[1] = (int)h1;
+	lms->history[2] = (int)h2;
+	lms->history[3] = (int)h3;
+	lms->weights[0] = (int)w0;
+	lms->weights[1] = (int)w1;
+	lms->weights[2] = (int)w2;
+	lms->weights[3] = (int)w3;
+}
+
+#undef RG_RGS_MONO_STEP
+
+/* Keep mono and multichannel frame bodies out of their dispatch wrapper.
+ * Inlining that dispatch into the multichannel body increases register
+ * pressure and introduces extra spills in its per-sample loop on MSVC. */
+static RG_NOINLINE int rg_rgs_decode_frame_mono(const uint8_t* bytes,
+                                               const RgRgsFrameMeta* meta,
+                                               int16_t* dst)
+{
+	RgRgsLms lms[1];
+	size_t p = RG_RGS_FRAME_HEADER_SIZE;
+
+	for (uint32_t c = 0u; c < 1u; c++)
+	{
+		for (uint32_t i = 0u; i < RG_RGS_LMS_LEN; i++)
+		{
+			lms[c].history[i] = rg_rgs_sign_extend_u16(rg_rgs_read_u16le(bytes + p));
+			p += 2u;
+		}
+		for (uint32_t i = 0u; i < RG_RGS_LMS_LEN; i++)
+		{
+			lms[c].weights[i] = rg_rgs_sign_extend_u16(rg_rgs_read_u16le(bytes + p));
+			p += 2u;
+		}
+	}
+
+	{
+		const uint8_t* mode_maps = NULL;
+		if (meta->flags == (RG_RGS_FRAME_FLAG_PLANAR | RG_RGS_FRAME_FLAG_MIXED))
+		{
+			mode_maps = bytes + p;
+			p += (size_t)meta->mode_bytes * 1u;
+		}
+
+		for (uint32_t c = 0u; c < 1u; c++)
+		{
+			for (uint32_t s = 0u; s < meta->slices; s++)
+			{
+				uint32_t sample_index = s * RG_RGS_SLICE_LEN;
+				uint32_t slice_len = meta->samples - sample_index;
+				uint32_t bits_per_sample = 3u;
+				uint64_t slice;
+				if (slice_len > RG_RGS_SLICE_LEN)
+				{
+					slice_len = RG_RGS_SLICE_LEN;
+				}
+				if (meta->flags == (RG_RGS_FRAME_FLAG_PLANAR | RG_RGS_FRAME_FLAG_ALL_2BIT) ||
+				    (mode_maps != NULL &&
+				     ((mode_maps[(size_t)c * meta->mode_bytes + (s >> 3u)] >> (s & 7u)) & 1u) != 0u))
+				{
+					bits_per_sample = 2u;
+				}
+				if (bits_per_sample == 2u)
+				{
+					slice = rg_rgs_read_u48le(bytes + p);
+					p += 6u;
+				}
+				else
+				{
+					slice = rg_rgs_read_u64le(bytes + p);
+					p += 8u;
+				}
+				rg_rgs_decode_packed_slice_mono(slice,
+				                                bits_per_sample,
+				                                &lms[c],
+				                                dst,
+				                                sample_index,
+				                                slice_len);
+			}
+		}
+	}
+
+	return p == meta->frame_size;
+}
+
+static RG_NOINLINE int rg_rgs_decode_frame_multi(const uint8_t* bytes,
+#else
 RGINLINE int rg_rgs_decode_frame(const uint8_t* bytes,
+#endif
                                  const RgRgsInfo* info,
                                  const RgRgsFrameMeta* meta,
                                  int16_t* dst)
@@ -1219,9 +1346,338 @@ RGINLINE int rg_rgs_decode_frame(const uint8_t* bytes,
 	return p == meta->frame_size;
 }
 
+#if defined(_MSC_VER) && !defined(__clang__) && defined(_M_X64)
+RGINLINE int rg_rgs_decode_frame(const uint8_t* bytes,
+                                 const RgRgsInfo* info,
+                                 const RgRgsFrameMeta* meta,
+                                 int16_t* dst)
+{
+	if (info->channels == 1u)
+	{
+		return rg_rgs_decode_frame_mono(bytes, meta, dst);
+	}
+	return rg_rgs_decode_frame_multi(bytes, info, meta, dst);
+}
+#endif
+
+typedef struct RgRgsChannelError
+{
+	uint64_t squared_error;
+	uint64_t signal_energy;
+	int unexpected_clipping;
+	uint32_t max_abs_error;
+} RgRgsChannelError;
+
+typedef struct RgRgsChannelCandidate
+{
+	uint64_t slices[RG_RGS_SLICES_PER_FRAME];
+	uint8_t widths[RG_RGS_SLICES_PER_FRAME];
+	uint64_t squared_error;
+	RgRgsLms initial_lms;
+	RgRgsLms final_lms;
+} RgRgsChannelCandidate;
+
+RGINLINE RgRgsLms rg_rgs_read_lms(const uint8_t* bytes)
+{
+	RgRgsLms lms;
+	for (uint32_t i = 0u; i < RG_RGS_LMS_LEN; i++)
+	{
+		lms.history[i] = rg_rgs_sign_extend_u16(rg_rgs_read_u16le(bytes + i * 2u));
+		lms.weights[i] = rg_rgs_sign_extend_u16(rg_rgs_read_u16le(bytes + 8u + i * 2u));
+	}
+	return lms;
+}
+
+RGINLINE uint32_t rg_rgs_channel_slice_width(const uint8_t* bytes,
+                                              uint32_t channels,
+                                              uint32_t mode_bytes,
+                                              uint32_t c,
+                                              uint32_t s)
+{
+	uint32_t flags = bytes[0] >> 4u;
+	if ((flags & RG_RGS_FRAME_FLAG_ALL_2BIT) != 0u)
+	{
+		return 2u;
+	}
+	if ((flags & RG_RGS_FRAME_FLAG_MIXED) != 0u)
+	{
+		size_t map = RG_RGS_FRAME_HEADER_SIZE + channels * RG_RGS_LMS_LEN * 4u;
+		if ((bytes[map + (size_t)c * mode_bytes + (s >> 3u)] & (1u << (s & 7u))) != 0u)
+		{
+			return 2u;
+		}
+	}
+	return 3u;
+}
+
+RGINLINE void rg_rgs_measure_slice(const int16_t* sample_data,
+                                    uint32_t channels,
+                                    uint32_t c,
+                                    uint32_t sample_index,
+                                    uint32_t slice_len,
+                                    uint64_t slice,
+                                    uint32_t width,
+                                    RgRgsLms* lms,
+                                    RgRgsChannelError* error)
+{
+	int16_t reconstructed[RG_RGS_SLICE_LEN];
+	rg_rgs_decode_packed_slice(slice, width, lms, reconstructed, 1u, 0u, 0u, slice_len);
+	for (uint32_t i = 0u; i < slice_len; i++)
+	{
+		int sample = sample_data[(sample_index + i) * channels + c];
+		int decoded = reconstructed[i];
+		int64_t difference = (int64_t)sample - decoded;
+		uint32_t absolute = (uint32_t)(difference < 0 ? -difference : difference);
+		error->squared_error += (uint64_t)(difference * difference);
+		error->signal_energy += (uint64_t)((int64_t)sample * sample);
+		if (absolute > error->max_abs_error)
+		{
+			error->max_abs_error = absolute;
+		}
+		if ((decoded == -32768 || decoded == 32767) &&
+		    sample != -32768 && sample != 32767 &&
+		    (difference < -4096 || difference > 4096))
+		{
+			error->unexpected_clipping = 1;
+		}
+	}
+}
+
+RGINLINE void rg_rgs_encode_channel_candidate(const int16_t* sample_data,
+                                               uint32_t channels,
+                                               uint32_t c,
+                                               uint32_t frame_len,
+                                               const RgRgsLms* initial_lms,
+                                               RgRgsQuality quality,
+                                               RgRgsChannelCandidate* candidate)
+{
+	RgRgsEncodeOptions options = {quality, 0u};
+	RgRgsLms lms = *initial_lms;
+	RgRgsChannelError error = {0u, 0u, 0, 0u};
+	int prev_scalefactor = 0;
+	candidate->initial_lms = *initial_lms;
+	candidate->final_lms = *initial_lms;
+	for (uint32_t s = 0u, sample_index = 0u; sample_index < frame_len;
+	     s++, sample_index += RG_RGS_SLICE_LEN)
+	{
+		uint32_t slice_len = frame_len - sample_index;
+		uint32_t width = 3u;
+		RgRgsSliceCandidate chosen;
+		if (slice_len > RG_RGS_SLICE_LEN)
+		{
+			slice_len = RG_RGS_SLICE_LEN;
+		}
+		chosen = rg_rgs_encode_slice3(sample_data, channels, sample_index,
+		                              slice_len, c, &lms, prev_scalefactor);
+		if (quality != RG_RGS_QUALITY_HIGH)
+		{
+			RgRgsSliceCandidate slice2 = rg_rgs_encode_slice2(sample_data, channels,
+			    sample_index, slice_len, c, &lms, prev_scalefactor);
+			if (rg_rgs_accept_2bit(slice2.rank, chosen.rank, slice_len, &options))
+			{
+				chosen = slice2;
+				width = 2u;
+			}
+		}
+		candidate->slices[s] = chosen.bits;
+		candidate->widths[s] = (uint8_t)width;
+		lms = chosen.lms;
+		prev_scalefactor = (int)(chosen.bits & 0xfu);
+		rg_rgs_measure_slice(sample_data, channels, c, sample_index, slice_len,
+		    chosen.bits, width, &candidate->final_lms, &error);
+	}
+	candidate->squared_error = error.squared_error;
+}
+
+/* Keep retry storage off the usual encoder stack path. Each channel is
+ * compared using decoded PCM error, not the slice search's weight penalty.
+ * The original frame remains an eligible choice throughout the search. */
+static RG_NOINLINE size_t rg_rgs_retry_frame(const int16_t* sample_data,
+                                              uint32_t channels,
+                                              uint32_t frame_len,
+                                              RgRgsLms* lms,
+                                              uint8_t* bytes,
+                                              size_t frame_size,
+                                              RgRgsQuality quality,
+                                              uint32_t retry_channels,
+                                              const RgRgsChannelError* errors)
+{
+	uint8_t original[RG_RGS_FRAME_SIZE(RG_RGS_MAX_CHANNELS, RG_RGS_SLICES_PER_FRAME) +
+	    RG_RGS_MAX_CHANNELS * RG_RGS_PLANAR_MODE_BYTES(RG_RGS_SLICES_PER_FRAME)];
+#ifdef __cplusplus
+	RgRgsChannelCandidate best = {};
+	RgRgsChannelCandidate trial = {};
+#else
+	RgRgsChannelCandidate best = {0};
+	RgRgsChannelCandidate trial = {0};
+#endif
+	uint32_t slices = (frame_len + RG_RGS_SLICE_LEN - 1u) / RG_RGS_SLICE_LEN;
+	uint32_t mode_bytes = RG_RGS_PLANAR_MODE_BYTES(slices);
+	size_t map_start = RG_RGS_FRAME_HEADER_SIZE + channels * RG_RGS_LMS_LEN * 4u;
+	size_t map_size = (size_t)channels * mode_bytes;
+	size_t source_pos = map_start;
+	size_t p = map_start + map_size;
+	size_t two_bit_count = 0u;
+
+	memcpy(original, bytes, frame_size);
+	if (((original[0] >> 4u) & RG_RGS_FRAME_FLAG_MIXED) != 0u)
+	{
+		source_pos += map_size;
+	}
+	memset(bytes + map_start, 0, map_size);
+	for (uint32_t c = 0u; c < channels; c++)
+	{
+		RgRgsLms incoming = rg_rgs_read_lms(original + RG_RGS_FRAME_HEADER_SIZE + c * 16u);
+		best.initial_lms = incoming;
+		best.final_lms = lms[c];
+		best.squared_error = errors[c].squared_error;
+		for (uint32_t s = 0u; s < slices; s++)
+		{
+			uint32_t width = rg_rgs_channel_slice_width(original, channels, mode_bytes, c, s);
+			best.widths[s] = (uint8_t)width;
+			best.slices[s] = width == 2u ? rg_rgs_read_u48le(original + source_pos) :
+			                              rg_rgs_read_u64le(original + source_pos);
+			source_pos += width == 2u ? 6u : 8u;
+		}
+
+		if ((retry_channels & (1u << c)) != 0u)
+		{
+			for (uint32_t reset = 0u; reset < 3u; reset++)
+			{
+				RgRgsLms initial = incoming;
+				if (reset == 1u)
+				{
+					memset(&initial, 0, sizeof(initial));
+					initial.weights[2] = -8192;
+					initial.weights[3] = 16384;
+				}
+				else if (reset == 2u)
+				{
+					memset(initial.weights, 0, sizeof(initial.weights));
+					initial.weights[3] = 8192;
+				}
+				for (int q = (int)RG_RGS_QUALITY_HIGH; q <= (int)RG_RGS_QUALITY_LOW; q++)
+				{
+					if ((quality == RG_RGS_QUALITY_HIGH && q != (int)RG_RGS_QUALITY_HIGH) ||
+					    (quality == RG_RGS_QUALITY_LOW && q == (int)RG_RGS_QUALITY_MEDIUM) ||
+					    (reset == 0u && q == (int)quality))
+					{
+						continue;
+					}
+					rg_rgs_encode_channel_candidate(sample_data, channels, c, frame_len,
+					    &initial, (RgRgsQuality)q, &trial);
+					if (trial.squared_error < best.squared_error)
+					{
+						best = trial;
+					}
+				}
+			}
+		}
+
+		for (uint32_t i = 0u; i < RG_RGS_LMS_LEN; i++)
+		{
+			size_t state_pos = RG_RGS_FRAME_HEADER_SIZE + c * 16u + i * 2u;
+			rg_rgs_write_u16le(bytes + state_pos, (uint16_t)best.initial_lms.history[i]);
+			rg_rgs_write_u16le(bytes + state_pos + 8u, (uint16_t)best.initial_lms.weights[i]);
+		}
+		lms[c] = best.final_lms;
+		for (uint32_t s = 0u; s < slices; s++)
+		{
+			if (best.widths[s] == 2u)
+			{
+				bytes[map_start + (size_t)c * mode_bytes + (s >> 3u)] |= (uint8_t)(1u << (s & 7u));
+				rg_rgs_write_u48le(bytes + p, best.slices[s]);
+				p += 6u;
+				two_bit_count++;
+			}
+			else
+			{
+				rg_rgs_write_u64le(bytes + p, best.slices[s]);
+				p += 8u;
+			}
+		}
+	}
+
+	/* Compact uniform widths without discarding a better mixed trajectory
+ * merely to save its mode map. The public bound includes those maps. */
+	bytes[0] = (uint8_t)(channels | ((RG_RGS_FRAME_FLAG_PLANAR | RG_RGS_FRAME_FLAG_MIXED) << 4u));
+	if (two_bit_count == 0u || two_bit_count == (size_t)slices * channels)
+	{
+		memmove(bytes + map_start, bytes + map_start + map_size, p - map_start - map_size);
+		p -= map_size;
+		bytes[0] = (uint8_t)(channels | ((RG_RGS_FRAME_FLAG_PLANAR |
+		    (two_bit_count != 0u ? RG_RGS_FRAME_FLAG_ALL_2BIT : 0u)) << 4u));
+	}
+	rg_rgs_write_u16le(bytes + 6u, (uint16_t)p);
+	return p;
+}
+
+RGINLINE size_t rg_rgs_encode_frame_guarded(const int16_t* sample_data,
+                                             uint32_t channels,
+                                             uint32_t samplerate,
+                                             uint32_t frame_len,
+                                             RgRgsLms* lms,
+                                             uint8_t* bytes,
+                                             const RgRgsEncodeOptions* options)
+{
+	RgRgsChannelError errors[RG_RGS_MAX_CHANNELS];
+	uint32_t slices = (frame_len + RG_RGS_SLICE_LEN - 1u) / RG_RGS_SLICE_LEN;
+	uint32_t mode_bytes = RG_RGS_PLANAR_MODE_BYTES(slices);
+	uint32_t retry_channels = 0u;
+	size_t frame_size;
+	size_t p = RG_RGS_FRAME_HEADER_SIZE + channels * RG_RGS_LMS_LEN * 4u;
+
+	/* Prediction must start from the same signed 16-bit weights that the
+ * frame stores, even if the preceding frame's updates exceeded that range. */
+	for (uint32_t c = 0u; c < channels; c++)
+	{
+		for (uint32_t i = 0u; i < RG_RGS_LMS_LEN; i++)
+		{
+			lms[c].weights[i] = rg_rgs_sign_extend_u16((uint16_t)lms[c].weights[i]);
+		}
+	}
+	frame_size = rg_rgs_encode_frame_planar_mixed(sample_data, channels, samplerate,
+	    frame_len, lms, bytes, options);
+	if (((bytes[0] >> 4u) & RG_RGS_FRAME_FLAG_MIXED) != 0u)
+	{
+		p += (size_t)channels * mode_bytes;
+	}
+	memset(errors, 0, sizeof(errors));
+	for (uint32_t c = 0u; c < channels; c++)
+	{
+		RgRgsLms decoded_lms = rg_rgs_read_lms(bytes + RG_RGS_FRAME_HEADER_SIZE + c * 16u);
+		for (uint32_t s = 0u; s < slices; s++)
+		{
+			uint32_t sample_index = s * RG_RGS_SLICE_LEN;
+			uint32_t slice_len = frame_len - sample_index;
+			uint32_t width = rg_rgs_channel_slice_width(bytes, channels, mode_bytes, c, s);
+			uint64_t slice = width == 2u ? rg_rgs_read_u48le(bytes + p) : rg_rgs_read_u64le(bytes + p);
+			p += width == 2u ? 6u : 8u;
+			if (slice_len > RG_RGS_SLICE_LEN)
+			{
+				slice_len = RG_RGS_SLICE_LEN;
+			}
+			rg_rgs_measure_slice(sample_data, channels, c, sample_index, slice_len,
+			    slice, width, &decoded_lms, &errors[c]);
+		}
+		lms[c] = decoded_lms;
+		if ((errors[c].squared_error > errors[c].signal_energy / 100u &&
+		     errors[c].squared_error > (uint64_t)frame_len * 448u * 448u) ||
+		    errors[c].unexpected_clipping || errors[c].max_abs_error >= 16384u)
+		{
+			retry_channels |= 1u << c;
+		}
+	}
+	if (retry_channels != 0u)
+	{
+		return rg_rgs_retry_frame(sample_data, channels, frame_len, lms, bytes,
+		    frame_size, rg_rgs_resolve_options(options).quality, retry_channels, errors);
+	}
+	return frame_size;
+}
+
 RGINLINE size_t rg_rgs_encode_bound(uint32_t samples, uint32_t channels, uint32_t samplerate)
 {
-	uint32_t stored_samples;
 	uint64_t frames;
 	uint64_t slices;
 	uint64_t size;
@@ -1232,13 +1688,13 @@ RGINLINE size_t rg_rgs_encode_bound(uint32_t samples, uint32_t channels, uint32_
 		return 0u;
 	}
 
-	stored_samples = rg_rgs_stored_samples(samples, samplerate);
-	frames = ((uint64_t)stored_samples + RG_RGS_MAX_FRAME_SAMPLES - 1u) / RG_RGS_MAX_FRAME_SAMPLES;
-	slices = ((uint64_t)stored_samples + RG_RGS_SLICE_LEN - 1u) / RG_RGS_SLICE_LEN;
+	frames = ((uint64_t)samples + RG_RGS_MAX_FRAME_SAMPLES - 1u) / RG_RGS_MAX_FRAME_SAMPLES;
+	slices = ((uint64_t)samples + RG_RGS_SLICE_LEN - 1u) / RG_RGS_SLICE_LEN;
+	/* Include temporary mixed-frame maps even when compaction later removes
+	 * them. Full frames contain 256 slices, an exact multiple of eight. */
 	size = RG_RGS_HEADER_SIZE +
-	       frames * (RG_RGS_FRAME_HEADER_SIZE + RG_RGS_LMS_LEN * 4u * (uint64_t)channels +
-	                 RG_RGS_SLICES_PER_FRAME * (uint64_t)channels) +
-	       slices * 8u * (uint64_t)channels;
+	       frames * (RG_RGS_FRAME_HEADER_SIZE + RG_RGS_LMS_LEN * 4u * (uint64_t)channels) +
+	       (slices * 8u + (slices + 7u) / 8u) * (uint64_t)channels;
 	if (size > (uint64_t)(size_t)-1)
 	{
 		return 0u;
@@ -1265,12 +1721,8 @@ RGINLINE size_t rg_rgs_encode_s16_ex(const int16_t* pcm,
                                      size_t dst_size,
                                      const RgRgsEncodeOptions* options)
 {
-	uint32_t stored_samplerate;
-	uint32_t stored_samples;
 	RgRgsEncodeOptions resolved;
 	size_t bound;
-	const int16_t* encode_pcm = pcm;
-	int16_t* resampled = NULL;
 	RgRgsLms lms[RG_RGS_MAX_CHANNELS];
 	uint8_t* bytes = (uint8_t*)dst;
 	size_t p = 0u;
@@ -1283,29 +1735,11 @@ RGINLINE size_t rg_rgs_encode_s16_ex(const int16_t* pcm,
 		return 0u;
 	}
 
-	stored_samplerate = rg_rgs_stored_samplerate(samplerate);
-	stored_samples = rg_rgs_stored_samples(samples, samplerate);
 	resolved = rg_rgs_resolve_options(options);
 	bound = rg_rgs_encode_bound(samples, channels, samplerate);
 	if (bound == 0u || dst_size < bound)
 	{
 		return 0u;
-	}
-
-	if (stored_samplerate != samplerate)
-	{
-		uint64_t total = (uint64_t)stored_samples * channels;
-		if (total > (uint64_t)(size_t)-1 / sizeof(int16_t))
-		{
-			return 0u;
-		}
-		resampled = (int16_t*)RG_RGS_MALLOC((size_t)total * sizeof(int16_t));
-		if (resampled == NULL)
-		{
-			return 0u;
-		}
-		rg_rgs_resample_to_target(pcm, samples, channels, samplerate, resampled, stored_samples);
-		encode_pcm = resampled;
 	}
 
 	memset(lms, 0, sizeof(lms));
@@ -1319,37 +1753,32 @@ RGINLINE size_t rg_rgs_encode_s16_ex(const int16_t* pcm,
 	bytes[p++] = (uint8_t)'g';
 	bytes[p++] = (uint8_t)'s';
 	bytes[p++] = (uint8_t)'!';
-	rg_rgs_write_u32le(bytes + p, stored_samples);
+	rg_rgs_write_u32le(bytes + p, samples);
 	p += 4u;
 	bytes[p++] = (uint8_t)RG_RGS_VERSION;
 	bytes[p++] = (uint8_t)RG_RGS_FILE_FLAGS;
 	bytes[p++] = 0u;
 	bytes[p++] = 0u;
 
-	for (uint32_t sample_index = 0u;
-	     sample_index < stored_samples;
-	     sample_index += RG_RGS_MAX_FRAME_SAMPLES)
+	for (uint32_t sample_index = 0u; sample_index < samples;)
 	{
-		uint32_t frame_len = stored_samples - sample_index;
+		uint32_t frame_len = samples - sample_index;
 		size_t written;
 		if (frame_len > RG_RGS_MAX_FRAME_SAMPLES)
 		{
 			frame_len = RG_RGS_MAX_FRAME_SAMPLES;
 		}
-		written = rg_rgs_encode_frame_planar_mixed(
-		    encode_pcm + (size_t)sample_index * channels,
+		written = rg_rgs_encode_frame_guarded(
+		    pcm + (size_t)sample_index * channels,
 		    channels,
-		    stored_samplerate,
+		    samplerate,
 		    frame_len,
 		    lms,
 		    bytes + p,
 		    &resolved);
 		p += written;
-	}
-
-	if (resampled != NULL)
-	{
-		RG_RGS_FREE(resampled);
+		/* Advancing by the final partial frame cannot wrap at UINT32_MAX. */
+		sample_index += frame_len;
 	}
 	return p;
 }
@@ -1359,12 +1788,9 @@ RGINLINE int rg_rgs_read_header(const void* src, size_t src_size, RgRgsInfo* out
 	const uint8_t* bytes = (const uint8_t*)src;
 	uint32_t samples;
 	uint32_t channels;
-	uint32_t flags;
 	uint32_t samplerate;
-	uint32_t frame_samples;
-	uint32_t frame_size;
-	uint32_t expected_samples;
-	size_t min_frame_size;
+	RgRgsInfo info;
+	RgRgsFrameMeta first_frame;
 
 	if (bytes == NULL || src_size < RG_RGS_HEADER_SIZE + RG_RGS_FRAME_HEADER_SIZE)
 	{
@@ -1384,27 +1810,25 @@ RGINLINE int rg_rgs_read_header(const void* src, size_t src_size, RgRgsInfo* out
 
 	samples = rg_rgs_read_u32le(bytes + 4u);
 	channels = bytes[12] & 0x0fu;
-	flags = bytes[12] >> 4u;
 	samplerate = rg_rgs_read_u24le(bytes + 13u);
-	frame_samples = rg_rgs_read_u16le(bytes + 16u);
-	frame_size = rg_rgs_read_u16le(bytes + 18u);
-	expected_samples = samples > RG_RGS_MAX_FRAME_SAMPLES ? RG_RGS_MAX_FRAME_SAMPLES : samples;
-	min_frame_size = RG_RGS_FRAME_HEADER_SIZE + (size_t)RG_RGS_LMS_LEN * 4u * channels;
 
 	if (!rg_rgs_valid_desc(samples, channels, samplerate) ||
-	    samplerate > RG_RGS_MAX_STORED_SAMPLERATE ||
-	    !rg_rgs_valid_frame_flags(flags) ||
-	    frame_samples != expected_samples ||
-	    frame_size < min_frame_size)
+	    samplerate > RG_RGS_MAX_STORED_SAMPLERATE)
+	{
+		return 0;
+	}
+	info.channels = channels;
+	info.samplerate = samplerate;
+	info.samples = samples;
+	if (!rg_rgs_parse_frame(bytes + RG_RGS_HEADER_SIZE, src_size - RG_RGS_HEADER_SIZE,
+	                        &info, samples, &first_frame))
 	{
 		return 0;
 	}
 
 	if (out_info != NULL)
 	{
-		out_info->channels = channels;
-		out_info->samplerate = samplerate;
-		out_info->samples = samples;
+		*out_info = info;
 	}
 	return 1;
 }

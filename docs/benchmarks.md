@@ -1,135 +1,214 @@
-# Benchmark methodology
+# Running the benchmarks
 
-The RGS benchmarks are diagnostic programs, not release gates. They report
-encoded size, bitrate, and elapsed time so maintainers can spot regressions and
-applications can estimate budgets on representative hardware. They never print
-a pass/fail verdict based on a fixed percentage and CI does not fail because a
-hosted runner is slow or noisy.
+See [performance results](performance.md) for measured codec and game-workload
+comparisons. Benchmarks are diagnostics, not CI speed gates: results depend on
+hardware, compiler, and system load. Correctness checks must pass before timing
+results are used.
 
-## Build and run
+## Setup and codec comparison
 
-On Windows:
+Run these commands from the repository root in a Visual Studio developer
+shell. Python, CMake, and the sibling `rg_core` checkout are required.
+
+```bat
+python -m venv .venv
+call .venv\Scripts\activate.bat
+python -m pip install numpy
+python tools/build_audio_deps.py
+python benchmarks/corpus.py
+build.bat bench_compare
+python benchmarks/run_benchmarks.py --baseline build/bench/codec_baseline.exe --trials 7 --cpu 0
+```
+
+The dependency bootstrap verifies pinned libsoxr and libsndfile archives and
+installs shared libraries under `build/deps/install`. Set `RG_AUDIO_DEPS_DIR`
+or `RG_CORE_DIR` to use other installations. These libraries serve the tools
+and benchmarks; the codec itself depends only on `rg_core/rg_defs.h`.
+
+The [corpus manifest](../benchmarks/corpus_manifest.json) identifies 151 PCM16
+WAVs from the [QOA samples](https://qoaformat.org/samples/) collection. Downloads
+are SHA-256 checked and stored under ignored `build/corpus/original`. The
+samples have mixed provenance; availability does not imply permission to
+redistribute the collection.
+
+The runner compares RGS high/medium/low, QOA, PCM WAV, and WAV IMA ADPCM. Results
+in `build/benchmark-results` include metadata, raw trials, summaries, prepared
+PCM, and listening exports. Use `--output` for another directory,
+`--category` or `--max-files` for a subset, and `--min-ms` to change the
+minimum timing batch. State exclusions when reporting results.
+
+For another compiler, build `benchmarks/codec_adapter.c` with the core and
+audio dependency include directories, linking libsoxr, libsndfile, and the
+platform math library. Build both revisions with the same optimization flags;
+select the baseline header with `RG_RGS_HEADER`. Supply executable paths
+through `--candidate` and `--baseline`. Shared-library directories must be
+available to the loader: `PATH` on Windows or `LD_LIBRARY_PATH` on Linux,
+including `lib64` when applicable.
+
+## Decode-only comparison
+
+After producing encoded inputs above, compare the current decoder with the
+frozen baseline preceding the mono optimization:
+
+```bat
+build.bat bench_decode
+python benchmarks/run_decode_profile.py --baseline build/decode-profile/baseline.exe --candidate build/decode-profile/candidate.exe --build-metadata build/decode-profile/build_metadata.json --mode checked --trials 7 --cpu 0 --output build/decode-results
+```
+
+The harness needs no audio preprocessing libraries. It decodes existing files
+into preallocated PCM buffers, checking encoded SHA-256 and decoded
+fingerprints against the corpus results. `--corpus-results` selects another
+input run; repeat `--asset relative/path.wav` for individual assets.
+
+The default [frozen baseline](../benchmarks/baselines/rg_rgs_2026_09_26.h) is
+shared by the build and runner. `RG_AUDIO_DECODE_BASELINE` selects another
+header; `RG_AUDIO_DECODE_BASELINE_SHA256` verifies its bytes before compilation.
+`RG_AUDIO_DECODE_BUILD_DIR` changes the executable/metadata directory and is
+also honored by `benchmarks/test_decode_profile.py`. When overriding defaults,
+pass matching executable, metadata, and `--baseline-header` paths to the runner.
+
+`--mode checked` measures the checked public decoder. Omitting it adds
+trusted and parse-only diagnostics. Trusted mode performs an untimed full
+checked decode before measuring trusted decoding. Parse-only validates frames
+without producing PCM and must not be presented as decode throughput.
+
+## Game workloads
+
+The synthetic programs provide quick local diagnostics:
 
 ```bat
 build.bat bench
-build.bat bench_stream
+bench_rgs.exe --iters 20 --quality medium
+bench_rgs_stream.exe --iters 20 --callback-frames 256
 ```
 
-The codec benchmark can run its deterministic generated corpus or optional PCM
-WAV files:
+WAVs passed directly to `bench_rgs` must already be at or below 44.1 kHz. The
+ring benchmark separates decoder and copy costs and requires complete callback
+requests; it does not measure device latency or scheduling resilience.
 
-```text
-bench_rgs.exe --iters 20
-bench_rgs.exe music.wav --iters 20
-bench_rgs.exe music.wav ambience.wav --iters 10
-bench_rgs.exe --quality high|medium|low --target-kbps N
+Use an exported RGS asset for the many-voice model:
+
+```bat
+build.bat bench_workloads
+python benchmarks/run_stream_workloads.py --candidate build/bench/stream_candidate.exe --baseline build/bench/stream_baseline.exe --input path/to/asset.rgs --trials 7 --cpu 0
 ```
 
-Run `bench_rgs.exe --help` for the exact options supported by the built
-revision. Without a file argument, no external or copyrighted audio corpus is
-needed: the program generates deterministic tonal, voice-like, and transient
-signals in memory. The generator parameters and iteration count are fixed by
-the built revision, and the iteration count is printed with the results so runs
-can be reproduced against that revision.
+The model covers 1/16/64/128 resident voices, 128/256/512-frame requests, steady
+playback, start bursts, and whole-file loops. It records worker decode time,
+copy/mix time, memory, and simulated budget exceedances. It runs sequentially;
+those exceedances are not measured device underruns. Production callback and
+ownership guidance is in [streaming.md](streaming.md).
 
-`bench_rgs_stream` likewise creates an encoded deterministic input by default
-and may accept exact `.rgs` buffers where supported. It uses the public
-`RgRgsDecoder` API; it does not duplicate private frame parsing.
+Measure SDL3 conversion to a 48 kHz output rate separately:
 
-On Unix-like systems, build with an optimizing C compiler and link the math
-library:
-
-```sh
-cc -std=c99 -O2 -Wall -Wextra \
-  -Isrc -I../rg_core/src tests/bench_rgs.c -lm -o bench_rgs
-
-cc -std=c99 -O2 -Wall -Wextra \
-  -Isrc -I../rg_core/src tests/bench_rgs_stream.c -lm -o bench_rgs_stream
+```bat
+build.bat bench_playback
+python benchmarks/run_playback_resample.py --input path/to/prepared.wav --trials 7 --cpu 0
 ```
 
-## Codec comparison
+Repeat `--input` for more files. The runner measures 128/256/512-frame blocks
+without opening a device, separating stream creation, queueing, draining, and
+flushing. SDL queue allocation is included; file loading, checksums, and
+destruction are excluded. First-output counts describe queued input, not
+speaker latency. Use `--sdl-library` to record the SDL binary. On Windows it
+must match the DLL staged beside the executable by the playback build target;
+audio dependency DLLs must also be on `PATH`.
 
-The benchmark vendors Dominic Szablewski's QOA reference implementation under
-`third_party/qoa` and compares it with the public RGS v1 encoder and checked
-decoder. QOA is the meaningful lineage baseline because RGS derives its LMS
-predictor and 3-bit dequantization from QOA while changing the container and
-adding planar mixed-width frames.
+### Real-device playback check
 
-For every input, the benchmark should report at least:
+Build the optional host test with the [player dependencies](../README.md)
+installed, then run it explicitly from CMD with representative mono and stereo
+WAVs. `SDL3_DIR` selects the SDL installation; this target needs no shaders.
 
-- source sample rate, stored RGS rate, channels, and duration;
-- selected RGS quality and target-bitrate hint;
-- QOA and RGS encoded bytes and duration-normalized bitrate;
-- encode and decode elapsed time over the requested iterations; and
-- decoded signal-to-noise measurements for the compared outputs.
+```bat
+build.bat playback_check
+set "PATH=%CD%\build\deps\install\bin;%PATH%"
+test_rgs_playback.exe --input path\to\mono.wav --seconds 10 --quality medium
+test_rgs_playback.exe --input path\to\mono.wav --seconds 10 --voices 16 --load-threads 4
+test_rgs_playback.exe --input path\to\stereo.wav --seconds 10 --quality medium
+test_rgs_playback.exe --input path\to\stereo.wav --seconds 10 --voices 16 --load-threads 4
+```
 
-RGS resamples sources above 44.1 kHz while QOA can retain their source rate.
-That is an intentional product-format difference, not a like-for-like residual
-coder comparison. Results MUST print both rates and SHOULD be interpreted as
-asset outcomes for equal playback duration. If the residual coding alone is of
-interest, provide source WAVs already normalized to the same rate and channel
-layout.
+Use `%RG_AUDIO_DEPS_DIR%\bin` on `PATH` for a custom dependency installation.
+The test opens the default SDL output device and rejects dummy/disk backends.
+It reuses the player's decoder workers and rings, verifies consumed PCM against
+a full decode, and mixes the voices before replacing output with silence.
+Use non-silent assets. `--quality` accepts high/medium/low, `--voices` accepts
+1–64, and `--load-threads` adds 0–64 CPU load threads for a 1–60 second run.
 
-RGS encoded and decoded outputs use caller-owned memory sized from the public
-bound and decoded metadata. If a source above 44.1 kHz invokes the RGS
-encoder's documented resampling allocation, that work remains inside its
-encode measurement. The vendored QOA reference uses its upstream
-allocation-returning encode and decode APIs; those allocations are part of the
-corresponding QOA measurements and are freed between operations. Setup, file
-I/O, source generation, validation of benchmark arguments, and output
-formatting are outside timed sections. Encode and decode results are checked
-before their timings are accepted.
+JSON reports distinguish the first 250 ms from running playback, including
+callback progress, ring underruns, PCM mismatches, and worker errors. Callback
+deadline misses are reported separately from the PCM/progress pass. Timings
+include verification work; they are not codec throughput or audio-device
+latency measurements. A pass verifies this host's callback path under the chosen
+load, not subjective sound quality or speaker output. Hosted CI does not run
+this device test.
 
-## Timing protocol
+For a separate hidden GPU startup check after `build.bat test_ci`, use
+`rgs_player.exe --smoke-test --hidden`. That command normally plays a short tone;
+set `SDL_AUDIO_DRIVER=dummy` for this GPU-only check and clear it before running
+the real-device test. Listening to the exported WAVs remains a separate quality
+review.
 
-Elapsed time uses a monotonic, high-resolution platform clock. Each result is
-the total for the printed iteration count divided by that count. A benchmark
-build uses optimization and should be run without a debugger. For useful local
-comparisons:
+## Encoder quality regression checks
 
-1. Use the same executable, corpus, quality, target hint, and iteration count.
-2. Close high-load applications and allow the machine to reach a stable power
-   state.
-3. Run each revision several times and compare distributions, not one minimum.
-4. Record CPU, operating system, compiler/version, flags, and commit IDs.
-5. Treat hosted-CI values as smoke data only; virtualization and contention
-   make them unsuitable for performance acceptance.
+`benchmarks/evaluate_encoder_quality.py` compares a candidate encoder with an
+existing corpus run. Preserve that run's `results.json`, prepared WAVs, and
+listening exports under `build/benchmark-results` (or select it with `--archive`).
+Build `benchmarks/codec_adapter.c` against the candidate header, then run:
 
-Compiler dead-code elimination is prevented by consuming decoded output and
-checking return values. The benchmarks must not substitute the trusted decoder
-for the checked decoder unless the output labels explicitly distinguish it.
+```bat
+python benchmarks/evaluate_encoder_quality.py --candidate path/to/candidate-adapter.exe --cpu 0 --output build/quality-review/results
+```
 
-## Streaming benchmark
+Repeat `--asset` to select a smaller set. All three presets are checked by
+default; repeat `--quality` to narrow the selection. Input and archived output
+SHA-256 hashes must match. The adapter checks checked, trusted, and streaming
+decoder PCM agreement outside its timed regions.
 
-Realtime playback has two independent costs, and `bench_rgs_stream` reports
-them separately:
+Whole-file SNR, segmental SNR, and spectral error are accompanied by separate
+measurements for every 5,120-sample codec frame and channel, including partial
+tails. The report records squared error, peak error, unexpected full-scale
+output, and explicit regression thresholds. These are numerical diagnostics;
+an improved whole-file score can still contain worse local errors. Listen to
+flagged excerpts before accepting an encoder change.
 
-1. **Decoder throughput**: allocation-free calls to
-   `rg_rgs_decoder_next_s16` producing complete maximum-bounded PCM frames.
-2. **Callback/ring copy**: bounded copies from already decoded PCM slots into
-   callback-sized output blocks.
+The default is one measured trial after an untimed warmup, suitable for
+screening size and encode cost. It does not establish a precise speed change.
+For paired encode timing, supply `--baseline` and `--baseline-header` for an
+adapter built with the same flags against a frozen earlier header. Both
+adapters must use the same current adapter source. `--build-metadata` verifies
+the selected header, executable, and adapter SHA-256 records. Archived timings
+are context only; paired ratios require fresh baseline measurements.
 
-The ring path is a scheduling model; it does not open a real audio device and
-does not claim end-to-end latency. The output includes callback size, ring-slot
-count or prefill depth, iteration count, total decoded samples, bytes per
-second, and per-operation timing statistics supported by the platform. A ring
-underrun, decode failure, or sample-count mismatch is a correctness failure,
-not a performance result.
+Outputs remain in ignored build storage, including full frame tables and
+listening WAVs. Public result sets contain curated measurements and metadata.
 
-Do not benchmark decoding compressed data in the simulated callback and call
-that the recommended integration. Production playback should follow the
-decode-ahead ownership model in [streaming.md](streaming.md).
+## Interpreting results
 
-## What results mean
+All formats receive identical prepared PCM. Rates at or below 44.1 kHz remain
+unchanged; higher rates use single-threaded libsoxr VHQ with no dither. Channel
+count and the actual flushed frame count are preserved. IMA padding contributes
+to file size but is excluded from decoded error calculations.
 
-- Encoded size and bitrate are deterministic for a fixed input and revision.
-- Timing is hardware-, compiler-, build-, and workload-specific.
-- The `target_kbps` value is a nonbinding quality cap, so measured bitrate can
-  be above or below it.
-- Synthetic sine and noise inputs exercise stable extremes but do not replace
-  a game's own music, dialogue, ambience, and effects corpus.
-- QOA is a comparison point, not a required runtime dependency or a quality
-  oracle.
+Codec timings exclude file I/O, preparation, quality metrics, and exports. RGS
+and QOA reuse caller-owned output buffers. PCM/IMA use libsndfile virtual I/O,
+including open/close and internal allocations, so their timing scope differs.
+Reported buffer sizes do not establish third-party peak memory usage.
 
-Release notes may cite benchmark results only when they include the full setup,
-input provenance, command line, commit IDs, and raw aggregate measurements.
+Warmup precedes each timed batch. Multiple trials alternate revision order;
+`--cpu` pins the runner and its children to one logical CPU. Keep builds, tests,
+and other workloads separate from performance runs. Batch-mean p95/p99 describe
+run variation, not callback tail latency. Preserve compiler flags, metadata,
+raw trials, input hashes, and output fingerprints with results.
+
+Compare size, bitrate, encode/decode cost, streaming cost, and memory alongside
+SNR, segmental SNR, and log-spectral error. Metrics use aligned prepared PCM
+without an alignment search that could conceal delays. PCM must reconstruct
+exactly, repeated fingerprints must agree, and shortened timelines fail the
+run. Numerical scores do not replace listening or establish equal perceptual
+quality across codecs.
+
+The optional `--legacy-import` lane exercises the older encoder's high-rate
+input conversion separately from the matched-input comparison. Its one-frame
+duration-rounding allowance does not apply to normal codec comparisons.

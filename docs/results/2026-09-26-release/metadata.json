@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "timestamp_utc": "2026-09-26T11:11:26Z",
+  "cpu": "12th Gen Intel(R) Core(TM) i7-12700KF",
+  "cpu_affinity": [
+    0
+  ],
+  "os": "Windows-11-10.0.26200-SP0",
+  "trials": 7,
+  "minimum_batch_ms": 10.0,
+  "modes": [
+    "checked"
+  ],
+  "compiler": {
+    "baseline": "MSVC 194435219",
+    "candidate": "MSVC 194435219",
+    "reference": "MSVC 194435219"
+  },
+  "assets": 151,
+  "raw_trials": 7399,
+  "comparisons": 453,
+  "flags": "/std:c11 /W4 /WX /O2",
+  "source_hashes": {
+    "candidate_executable": {
+      "sha256": "36a8ce157f37e8f3fbbddccc8489d4af14ddde78f8f0fd9dfd264746d3c33577"
+    },
+    "baseline_executable": {
+      "sha256": "256d0f2a42243fcb6386c73bf9bf22f2181359943b07f6b579efd39726be5b6f"
+    },
+    "candidate_header": {
+      "sha256": "ecff374dd626bde76ad2e0b26c257b3b828949295ac6b3c838d53490de19f20e",
+      "source": "benchmarks/baselines/rg_rgs_2026_09_26_measured.h"
+    },
+    "baseline_header": {
+      "sha256": "c9b5543c51524c1b4ef0d4d2e84d16c3a439866e0f0d3fb11e7c40d3986363ae",
+      "source": "benchmarks/baselines/rg_rgs_2026_09_26_pre_quality.h"
+    },
+    "qoa_header": {
+      "sha256": "43ae6aced86effecb5addeae500f6fdadd6cfc7412cb91018962a2318bab6f16"
+    },
+    "native_source": {
+      "sha256": "65226a7fdfbb34fea09cf6777500253158e474023972c1c35fe3899da9201644",
+      "source": "benchmarks/decode_profile.c"
+    },
+    "runner_source": {
+      "sha256": "f138706991196937fecc9274f9b84ff9eca263ee9c488762a281990b24db1e89",
+      "source": "benchmarks/run_decode_profile.py"
+    },
+    "corpus_results": {
+      "sha256": "506d61d5c5315151872b6afa43656cdff7e734d2ddabcd8b3854a1a2036c02f8"
+    }
+  },
+  "manifest_sha256": "6252ecc8641745ce6654fde413510cfa3e4e279565f13dd9f5ab39b1c09e4f5c",
+  "timing_scope": "Existing encoded assets, preallocated PCM, checked RGS and QOA header parsing included; loading, allocation, checksum scans, warmup excluded. Totals sum per-file medians of seven trial batch means.",
+  "comparison_scope": "Final encoder RGS versus unchanged QOA on the same prepared PCM. Frozen/current decoder differences do not represent an algorithm improvement.",
+  "corpus_source_hashes": {
+    "manifest": {
+      "sha256": "6252ecc8641745ce6654fde413510cfa3e4e279565f13dd9f5ab39b1c09e4f5c",
+      "source": "benchmarks/corpus_manifest.json"
+    },
+    "quality_results": {
+      "sha256": "12e8cfc350c536fee717a1efd037ccc96b68a493c4c2db47e92de0a2c6f7e0fe"
+    },
+    "archived_results": {
+      "sha256": "4d6f776bdf81e34b2cc92539bf3ec0d1b6f55c4a0c551b2699a21ceb65fe8a35"
+    },
+    "adapter_script": {
+      "sha256": "5a5156691cf596e0ce932799e714868820f2ec58ec1cf863a3aa26039e4030c7"
+    },
+    "candidate_header": {
+      "sha256": "ecff374dd626bde76ad2e0b26c257b3b828949295ac6b3c838d53490de19f20e",
+      "source": "benchmarks/baselines/rg_rgs_2026_09_26_measured.h"
+    }
+  },
+  "local_report_sha256": "86bf7481e154400b61d027d3d335409edfa7c9cd3559bb943f893f348e99d16c",
+  "published_artifacts": {
+    "channels.csv": {
+      "sha256": "b122fa1f8f2a1c54253592403a389a4dcad46ce69127fc59b2a7bb5d61cfb1e7",
+      "bytes": 443
+    },
+    "comparisons.csv": {
+      "sha256": "c436aa724f7bc970dfee29e7540b2f73116e12e20195f338adba4eec0ba1685e",
+      "bytes": 50121
+    },
+    "compatibility.json": {
+      "sha256": "d95dd06776b8089ba5dee2735194c2f18b574668abc2303e030f2c47110455bc",
+      "bytes": 664
+    },
+    "per_file.csv": {
+      "sha256": "4cd102ba698243ad8a8785dbc7747fcea85d248061c3c431fa3a042a9796a033",
+      "bytes": 289023
+    },
+    "raw.jsonl.gz": {
+      "sha256": "93887abf0632d3305cea81baea4440559b3d8fef82e98dac75025a92d534fb7c",
+      "bytes": 169000
+    },
+    "totals.csv": {
+      "sha256": "420447359a8e90272ba5192cfb44732f907340ad6b5d86af9276e5c9f360ebdc",
+      "bytes": 2631
+    }
+  },
+  "release_header_provenance": {
+    "final_header": {
+      "source": "src/rg_rgs.h",
+      "sha256": "c815225f3124541c038b6d9249a1d65ddf78b22843de4133f05ab9da21d94afc"
+    },
+    "c_equivalence": {
+      "source": "benchmarks/baselines/rg_rgs_2026_09_26_c_equivalence.json",
+      "sha256": "70379eb813c962aa57bf937624698f5d8eddc123ae300372acfeced6b94584ec"
+    },
+    "scope": "The measured header remains the benchmark input. A C++-only initializer adjustment in the release header leaves both measured C translation units identical after the documented preprocessing normalization."
+  }
+}

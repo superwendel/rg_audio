@@ -1,0 +1,2 @@
+# Preserve the exact frozen decoder source bytes.
+rg_rgs_before_mono.h.txt -text

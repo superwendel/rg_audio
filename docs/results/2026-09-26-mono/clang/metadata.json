@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "timestamp_utc": "2026-09-26T01:33:44Z",
+  "cpu": "12th Gen Intel(R) Core(TM) i7-12700KF",
+  "logical_cpus": 20,
+  "cpu_affinity": [
+    0
+  ],
+  "os": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.3 (tags/v3.13.3:6280bb5, Apr  8 2025, 14:47:33) [MSC v.1943 64 bit (AMD64)]",
+  "trials": 7,
+  "minimum_batch_ms": 30.0,
+  "assets": [
+    "bandcamp/darkside_narrow_road.wav",
+    "oculus_audio_pack/ambient_city_rain_lp.wav",
+    "sqam/49_female_speech_english_mono.wav",
+    "oculus_audio_pack/ambient_wind_chimes_lp_01.wav",
+    "oculus_audio_pack/action_typing.wav",
+    "oculus_audio_pack/machine_power_tool_04.wav",
+    "oculus_audio_pack/voice_male_breathing_01.wav",
+    "oculus_audio_pack/voice_male_scream_01.wav",
+    "oculus_audio_pack/swoosh_03.wav"
+  ],
+  "modes": [
+    "checked"
+  ],
+  "hashes": {
+    "candidate_executable": {
+      "artifact": "clang_candidate.exe",
+      "sha256": "8d68fa18c89969cd806fd202a605e2489eab44ab3d9af150e5c221c40d3753dc"
+    },
+    "baseline_executable": {
+      "artifact": "clang_baseline.exe",
+      "sha256": "c1526eafd48a94fb634b9c9b61a8ca69f58421a10a7a947bbe3204fa91827b85"
+    },
+    "candidate_header": {
+      "path": "src/rg_rgs.h",
+      "sha256": "c9b5543c51524c1b4ef0d4d2e84d16c3a439866e0f0d3fb11e7c40d3986363ae"
+    },
+    "baseline_header": {
+      "path": "benchmarks/baselines/rg_rgs_2026_09_26.h",
+      "sha256": "90ca4ac05ed3aa3eba8a72ce6b48a9177333486dce63163d895f7cb67fd9d9ac"
+    },
+    "qoa_header": {
+      "path": "third_party/qoa/qoa.h",
+      "sha256": "43ae6aced86effecb5addeae500f6fdadd6cfc7412cb91018962a2318bab6f16"
+    },
+    "native_source": {
+      "path": "benchmarks/decode_profile.c",
+      "sha256": "65226a7fdfbb34fea09cf6777500253158e474023972c1c35fe3899da9201644"
+    },
+    "runner_source": {
+      "path": "benchmarks/run_decode_profile.py",
+      "sha256": "9fb34d3a883516e4bd3cd6eb0c07e9203f065a4dbcaaf527b9261c3941eaea6a"
+    },
+    "corpus_results": {
+      "path": "build/benchmark-results/results.json",
+      "sha256": "4d6f776bdf81e34b2cc92539bf3ec0d1b6f55c4a0c551b2699a21ceb65fe8a35"
+    }
+  },
+  "timing_scope": "Checked RGS and reference QOA decode complete existing encoded assets into preallocated PCM buffers, including header parsing. File I/O, allocation, preparation, output checksums, and one warmup are outside timing. Each native trial batches decoding for at least minimum_batch_ms.",
+  "statistics": "Per-file percentiles describe trial batch means, not callback latency. Totals sum per-file medians. QOA runs once per asset/trial with the candidate executable; revision order alternates each trial.",
+  "compiler": {
+    "baseline": "clang 19.1.5 ",
+    "candidate": "clang 19.1.5 ",
+    "reference": "clang 19.1.5 "
+  },
+  "build": {
+    "compiler": "Clang 19.1.5; target x86_64-pc-windows-msvc; thread model posix",
+    "flags": "-std=c99 -pedantic-errors -O2 -Wall -Wextra -Werror",
+    "include_directories": [
+      "src",
+      "../rg_core/src"
+    ],
+    "source_sha256": "c9b5543c51524c1b4ef0d4d2e84d16c3a439866e0f0d3fb11e7c40d3986363ae",
+    "baseline_source": {
+      "path": "benchmarks/baselines/rg_rgs_2026_09_26.h",
+      "sha256": "90ca4ac05ed3aa3eba8a72ce6b48a9177333486dce63163d895f7cb67fd9d9ac"
+    },
+    "inputs": {
+      "src/rg_rgs.h": "c9b5543c51524c1b4ef0d4d2e84d16c3a439866e0f0d3fb11e7c40d3986363ae",
+      "benchmarks/decode_profile.c": "65226a7fdfbb34fea09cf6777500253158e474023972c1c35fe3899da9201644",
+      "rg_core/src/rg_defs.h": "0991138f2d6cdf8c8f0daae62a4c9761d4d9074e745e825a31c59789b7eadda6"
+    },
+    "executables": {
+      "baseline": {
+        "artifact": "clang_baseline.exe",
+        "sha256": "c1526eafd48a94fb634b9c9b61a8ca69f58421a10a7a947bbe3204fa91827b85"
+      },
+      "candidate": {
+        "artifact": "clang_candidate.exe",
+        "sha256": "8d68fa18c89969cd806fd202a605e2489eab44ab3d9af150e5c221c40d3753dc"
+      }
+    },
+    "baseline_header_macro": "RG_RGS_HEADER"
+  },
+  "publication_note": "Local invocation and installation details are omitted. Source paths are repository-relative; dependency paths identify the dependency. Artifact names identify local build outputs, which are not redistributed. Hashes identify measured bytes and may differ from current repository files. The retained baseline header has been relocated without changing its bytes."
+}

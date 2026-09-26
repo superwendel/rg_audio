@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "timestamp_utc": "2026-09-26T01:29:28Z",
+  "cpu": "12th Gen Intel(R) Core(TM) i7-12700KF",
+  "logical_cpus": 20,
+  "cpu_affinity": [
+    0
+  ],
+  "os": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.3 (tags/v3.13.3:6280bb5, Apr  8 2025, 14:47:33) [MSC v.1943 64 bit (AMD64)]",
+  "trials": 7,
+  "minimum_batch_ms": 10.0,
+  "assets": [
+    "bandcamp/allegaeon-beasts-and-worms.wav",
+    "bandcamp/darkside_narrow_road.wav",
+    "bandcamp/forest_swords_annekas_battle.wav",
+    "bandcamp/four_tet_baby.wav",
+    "bandcamp/inverse_phase_atarible_lie.wav",
+    "bandcamp/julien_baker_sprained_ankle.wav",
+    "bandcamp/lorn_drawn_out_like_an_ache.wav",
+    "bandcamp/nils_frahm_all_melody.wav",
+    "bandcamp/planes_mistaken_for_stars_one_fucked_pony.wav",
+    "bandcamp/whalerider_devil_got_me.wav",
+    "oculus_audio_pack/Indoor_drawer_close_02.wav",
+    "oculus_audio_pack/Indoor_fan_off.wav",
+    "oculus_audio_pack/Indoor_switch_small_on_01.wav",
+    "oculus_audio_pack/action_drop_coin_01.wav",
+    "oculus_audio_pack/action_drop_paper_ball.wav",
+    "oculus_audio_pack/action_shell_casing_on_grass_01.wav",
+    "oculus_audio_pack/action_sword_scrape_02.wav",
+    "oculus_audio_pack/action_typing.wav",
+    "oculus_audio_pack/ambience_forest_birds_02.wav",
+    "oculus_audio_pack/ambience_forest_birds_03.wav",
+    "oculus_audio_pack/ambient_city_rain_lp.wav",
+    "oculus_audio_pack/ambient_farm_generic_lp.wav",
+    "oculus_audio_pack/ambient_night_lp.wav",
+    "oculus_audio_pack/ambient_water_lake_shore_01_lp.wav",
+    "oculus_audio_pack/ambient_wind_chimes_lp_01.wav",
+    "oculus_audio_pack/ambient_wood_cut_axe.wav",
+    "oculus_audio_pack/body_movement_clothing_generic_04.wav",
+    "oculus_audio_pack/body_movement_withGear_03.wav",
+    "oculus_audio_pack/bounce_cartoony_03.wav",
+    "oculus_audio_pack/car_engine_high_lp.wav",
+    "oculus_audio_pack/car_start_run_stop_01.wav",
+    "oculus_audio_pack/car_trunk_close.wav",
+    "oculus_audio_pack/creepy_blood_squish_slimy_03.wav",
+    "oculus_audio_pack/creepy_chains_02.wav",
+    "oculus_audio_pack/creepy_creature_03.wav",
+    "oculus_audio_pack/creepy_drone_02.wav",
+    "oculus_audio_pack/creepy_impacts_reverb_01.wav",
+    "oculus_audio_pack/creepy_scratch_02.wav",
+    "oculus_audio_pack/creepy_skull_cracking_02.wav",
+    "oculus_audio_pack/creepy_whispers_01.wav",
+    "oculus_audio_pack/door_lock_key_03.wav",
+    "oculus_audio_pack/doors_frontdoor_open_01.wav",
+    "oculus_audio_pack/doors_office_doorknob_01.wav",
+    "oculus_audio_pack/doors_sliding_lock_01.wav",
+    "oculus_audio_pack/footsteps_shoe_concrete_run_04.wav",
+    "oculus_audio_pack/footsteps_shoe_dirt_run_03.wav",
+    "oculus_audio_pack/footsteps_shoe_grass_run_02.wav",
+    "oculus_audio_pack/footsteps_shoe_grass_walk_05.wav",
+    "oculus_audio_pack/footsteps_shoe_metal_run_04.wav",
+    "oculus_audio_pack/footsteps_shoe_snow_walk_03.wav",
+    "oculus_audio_pack/indoor_hydraulic_01.wav",
+    "oculus_audio_pack/indoor_lever_pull_03.wav",
+    "oculus_audio_pack/interaction_book_page_turns.wav",
+    "oculus_audio_pack/interaction_faucet_on.wav",
+    "oculus_audio_pack/interaction_knapsack_nylon_close.wav",
+    "oculus_audio_pack/interaction_magic_spell_01.wav",
+    "oculus_audio_pack/interaction_valve_01_turn.wav",
+    "oculus_audio_pack/interaction_whoosh_medium_02.wav",
+    "oculus_audio_pack/machine_power_tool_04.wav",
+    "oculus_audio_pack/sting_acoustic_guit_pos_01.wav",
+    "oculus_audio_pack/sting_banjo_humorous_02.wav",
+    "oculus_audio_pack/sting_loss_mallet.wav",
+    "oculus_audio_pack/sting_loss_piano.wav",
+    "oculus_audio_pack/sting_victory_mallet.wav",
+    "oculus_audio_pack/sting_victory_orch_03.wav",
+    "oculus_audio_pack/sting_xp_level_up_orch_01.wav",
+    "oculus_audio_pack/swoosh_03.wav",
+    "oculus_audio_pack/ui_casual_musical_open.wav",
+    "oculus_audio_pack/ui_laser_shoot_02.wav",
+    "oculus_audio_pack/ui_magical_open.wav",
+    "oculus_audio_pack/ui_metal_open.wav",
+    "oculus_audio_pack/ui_notification_03.wav",
+    "oculus_audio_pack/ui_powerup_01.wav",
+    "oculus_audio_pack/ui_scifi_traditional_confirm.wav",
+    "oculus_audio_pack/ui_wood_error.wav",
+    "oculus_audio_pack/voice_animal_duck_01.wav",
+    "oculus_audio_pack/voice_animal_sheep_01.wav",
+    "oculus_audio_pack/voice_evil_laugh_02.wav",
+    "oculus_audio_pack/voice_horse_neigh_01.wav",
+    "oculus_audio_pack/voice_male_breathing_01.wav",
+    "oculus_audio_pack/voice_male_scream_01.wav",
+    "sqam/01_sine_wave_1khz_20db_10db_0db_mono.wav",
+    "sqam/02_band_limited_pink_noise_stereo.wav",
+    "sqam/03_electronic_gong_100hz_mono.wav",
+    "sqam/04_electronic_gong_400hz_mono.wav",
+    "sqam/05_electronic_gong_5khz_mono.wav",
+    "sqam/06_electronic_gong_500hz_vibrato_mono.wav",
+    "sqam/07_electronic_tune_frere_jacques_mono.wav",
+    "sqam/08_violin_arpegio_melodious_phrase_stereo.wav",
+    "sqam/09_viola_arpegio_melodious_phrase_stereo.wav",
+    "sqam/10_violoncello_arpegio_melodious_phrase_stereo.wav",
+    "sqam/11_double_bass_arpegio_melodious_phrase_stereo.wav",
+    "sqam/12_piccolo_melodious_phrase_stereo.wav",
+    "sqam/13_flute_arpegio_melodious_phrase_stereo.wav",
+    "sqam/14_oboe_arpegio_melodious_phrase_stereo.wav",
+    "sqam/15_cor_anglais_arpegio_stereo.wav",
+    "sqam/16_clarinet_arpegio_melodious_phrase_stereo.wav",
+    "sqam/17_bass_clarinet_arpegio_stereo.wav",
+    "sqam/18_bassoon_arpegio_melodious_phrase_stereo.wav",
+    "sqam/19_contra_bassoon_arpegio_stereo.wav",
+    "sqam/20_saxophone_arpegio_melodious_phrase_stereo.wav",
+    "sqam/21_trumpet_arpegio_melodious_phrase_stereo.wav",
+    "sqam/22_trombone_arpegio_melodious_phrase_stereo.wav",
+    "sqam/23_horn_arpegio_melodious_phrase_stereo.wav",
+    "sqam/24_tuba_arpegio_melodious_phrase_stereo.wav",
+    "sqam/25_harp_arpegio_melodious_phrase_stereo.wav",
+    "sqam/26_claves_single_tone_single_tone_rhythm_stereo.wav",
+    "sqam/27_castanets_single_tone_rhythm_stereo.wav",
+    "sqam/28_side_drum_stereo.wav",
+    "sqam/29_bass_drum_single_tone_stereo.wav",
+    "sqam/30_kettle_drums_single_tone_stereo.wav",
+    "sqam/31_cymbal.wav",
+    "sqam/32_triangles-triangle_roll_stereo.wav",
+    "sqam/33_gong_single_tone_forte_single_tone_piano_roll_stereo.wav",
+    "sqam/34_tubular_bells_melodious_phrase_stereo.wav",
+    "sqam/35_glockenspiel_arpegio_melodious_phrase_stereo.wav",
+    "sqam/36_xylophone_single_tone_melodious_phrase_stereo.wav",
+    "sqam/37_vibraphone_arpegio_stereo.wav",
+    "sqam/38_marimba_single_tone_stereo.wav",
+    "sqam/39_grand_piano_arpegio_stereo.wav",
+    "sqam/40_harpsichord_arpegio_melodious_phrase_stereo.wav",
+    "sqam/41_celesta_arpegio_single_tone_melodious_phrase_stereo.wav",
+    "sqam/42_accordion_melodious_phrase_stereo.wav",
+    "sqam/43_organ_arpegio_stereo.wav",
+    "sqam/44_soprano_stereo.wav",
+    "sqam/45_alto_stereo.wav",
+    "sqam/46_tenor_stereo.wav",
+    "sqam/47_bass_stereo.wav",
+    "sqam/48_quartet_stereo.wav",
+    "sqam/49_female_speech_english_mono.wav",
+    "sqam/50_male_speech_english_mono.wav",
+    "sqam/51_female_speech_french_mono.wav",
+    "sqam/52_male_speech_french_mono.wav",
+    "sqam/53_female_speech_german_mono.wav",
+    "sqam/54_male_speech_german_mono.wav",
+    "sqam/55_trumpet_haydn_stereo.wav",
+    "sqam/56_organ_h\u00e4ndel_stereo.wav",
+    "sqam/57_organ_bach_stereo.wav",
+    "sqam/58_guitar_sarasate_stereo.wav",
+    "sqam/59_violin_ravel_stereo.wav",
+    "sqam/60_piano_schubert_stereo.wav",
+    "sqam/61_soprano_mozart_stereo.wav",
+    "sqam/62_soprano_spiritual_stereo.wav",
+    "sqam/63_soloists_verdi_stereo.wav",
+    "sqam/64_choir_orff_stereo.wav",
+    "sqam/65_orchestra_strauss_stereo.wav",
+    "sqam/66_wind_ensemble_stravinsky_stereo.wav",
+    "sqam/67_wind_ensemble_mozart_stereo.wav",
+    "sqam/68_orchestra_baird_stereo.wav",
+    "sqam/69_abba_stereo.wav",
+    "sqam/70_eddie_rabbitt_stereo.wav"
+  ],
+  "modes": [
+    "checked"
+  ],
+  "hashes": {
+    "candidate_executable": {
+      "artifact": "candidate.exe",
+      "sha256": "399d1748423fa8c693ab84e28423c2ac53e19599c65b02c405880dd6dec21a6c"
+    },
+    "baseline_executable": {
+      "artifact": "baseline.exe",
+      "sha256": "97f5f77b47933049e506ef160cb0188c9fbeffebf3e93dc498f52012f8787414"
+    },
+    "candidate_header": {
+      "path": "src/rg_rgs.h",
+      "sha256": "c9b5543c51524c1b4ef0d4d2e84d16c3a439866e0f0d3fb11e7c40d3986363ae"
+    },
+    "baseline_header": {
+      "path": "benchmarks/baselines/rg_rgs_2026_09_26.h",
+      "sha256": "90ca4ac05ed3aa3eba8a72ce6b48a9177333486dce63163d895f7cb67fd9d9ac"
+    },
+    "qoa_header": {
+      "path": "third_party/qoa/qoa.h",
+      "sha256": "43ae6aced86effecb5addeae500f6fdadd6cfc7412cb91018962a2318bab6f16"
+    },
+    "native_source": {
+      "path": "benchmarks/decode_profile.c",
+      "sha256": "65226a7fdfbb34fea09cf6777500253158e474023972c1c35fe3899da9201644"
+    },
+    "runner_source": {
+      "path": "benchmarks/run_decode_profile.py",
+      "sha256": "9fb34d3a883516e4bd3cd6eb0c07e9203f065a4dbcaaf527b9261c3941eaea6a"
+    },
+    "corpus_results": {
+      "path": "build/benchmark-results/results.json",
+      "sha256": "4d6f776bdf81e34b2cc92539bf3ec0d1b6f55c4a0c551b2699a21ceb65fe8a35"
+    }
+  },
+  "timing_scope": "Checked RGS and reference QOA decode complete existing encoded assets into preallocated PCM buffers, including header parsing. File I/O, allocation, preparation, output checksums, and one warmup are outside timing. Each native trial batches decoding for at least minimum_batch_ms.",
+  "statistics": "Per-file percentiles describe trial batch means, not callback latency. Totals sum per-file medians. QOA runs once per asset/trial with the candidate executable; revision order alternates each trial.",
+  "compiler": {
+    "baseline": "MSVC 194435219",
+    "candidate": "MSVC 194435219",
+    "reference": "MSVC 194435219"
+  },
+  "build": {
+    "schema_version": 1,
+    "compiler": "MSVC 19.44.35219 for x64",
+    "flags": "/nologo /std:c11 /W4 /WX /O2",
+    "os": "Windows-11-10.0.26200-SP0",
+    "candidate_base_revision": "af980e88b3e5c138bd5d9430e8d4da5beb654643",
+    "baseline_source": {
+      "path": "benchmarks/baselines/rg_rgs_2026_09_26.h",
+      "sha256": "90ca4ac05ed3aa3eba8a72ce6b48a9177333486dce63163d895f7cb67fd9d9ac"
+    },
+    "baseline_expected_sha256": "90ca4ac05ed3aa3eba8a72ce6b48a9177333486dce63163d895f7cb67fd9d9ac",
+    "external_codec_libraries": [],
+    "input_hashes": {
+      "harness": {
+        "path": "benchmarks/decode_profile.c",
+        "sha256": "65226a7fdfbb34fea09cf6777500253158e474023972c1c35fe3899da9201644"
+      },
+      "candidate_header": {
+        "path": "src/rg_rgs.h",
+        "sha256": "c9b5543c51524c1b4ef0d4d2e84d16c3a439866e0f0d3fb11e7c40d3986363ae"
+      },
+      "core_defs": {
+        "path": "rg_core/src/rg_defs.h",
+        "sha256": "0991138f2d6cdf8c8f0daae62a4c9761d4d9074e745e825a31c59789b7eadda6"
+      },
+      "core_time": {
+        "path": "rg_core/src/rg_time.h",
+        "sha256": "94554d144d175b19b08bef87d4936ecdfa681ad4cd7b2edac76fa5660f2c91a5"
+      },
+      "qoa_header": {
+        "path": "third_party/qoa/qoa.h",
+        "sha256": "43ae6aced86effecb5addeae500f6fdadd6cfc7412cb91018962a2318bab6f16"
+      },
+      "build_script": {
+        "path": "build.bat",
+        "sha256": "122bc14c903c04ae8c60fc90550c1baf6d2e6529278dcd7666a6951cf225d049"
+      },
+      "metadata_script": {
+        "path": "tools/decode_build_metadata.py",
+        "sha256": "d4559e8d5634defd94cb4fd0438a66cbdcaad79de1c32e7c17ab201e771597ac"
+      }
+    },
+    "executables": {
+      "baseline": {
+        "artifact": "baseline.exe",
+        "sha256": "97f5f77b47933049e506ef160cb0188c9fbeffebf3e93dc498f52012f8787414"
+      },
+      "candidate": {
+        "artifact": "candidate.exe",
+        "sha256": "399d1748423fa8c693ab84e28423c2ac53e19599c65b02c405880dd6dec21a6c"
+      }
+    },
+    "include_directories": [
+      "src",
+      "../rg_core/src"
+    ],
+    "baseline_header_macro": "RG_RGS_HEADER"
+  },
+  "publication_note": "Local invocation and installation details are omitted. Source paths are repository-relative; dependency paths identify the dependency. Artifact names identify local build outputs, which are not redistributed. Hashes identify measured bytes and may differ from current repository files. The retained baseline header has been relocated without changing its bytes."
+}

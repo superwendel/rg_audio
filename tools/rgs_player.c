@@ -16,6 +16,7 @@
 #endif
 
 #include "rg_rgs.h"
+#include "rgs_audio_prepare.h"
 #include "rg_gui_gpu.h"
 
 #include <errno.h>
@@ -287,61 +288,9 @@ static void rgs_player_track_destroy(RgsPlayerTrack* track)
 {
 	if (track == NULL)
 		return;
-	SDL_free(track->wav_pcm);
+	free(track->wav_pcm);
 	free(track->encoded);
 	memset(track, 0, sizeof(*track));
-}
-
-static int16_t* rgs_player_normalize_reference(const int16_t* src,
-                                               uint32_t src_frames,
-                                               uint32_t channels,
-                                               uint32_t src_rate,
-                                               const RgRgsInfo* info)
-{
-	SDL_AudioSpec src_spec;
-	SDL_AudioSpec dst_spec;
-	uint64_t values = (uint64_t)info->samples * info->channels;
-	uint64_t src_bytes = (uint64_t)src_frames * channels * sizeof(int16_t);
-	Uint8* converted = NULL;
-	int converted_size = 0;
-	int bytes_per_frame;
-	uint32_t converted_frames;
-	int16_t* dst;
-	if (values > SIZE_MAX / sizeof(int16_t) || src_bytes > INT_MAX)
-		return NULL;
-	src_spec.format = SDL_AUDIO_S16;
-	src_spec.channels = (int)channels;
-	src_spec.freq = (int)src_rate;
-	dst_spec.format = SDL_AUDIO_S16;
-	dst_spec.channels = (int)info->channels;
-	dst_spec.freq = (int)info->samplerate;
-	if (!SDL_ConvertAudioSamples(&src_spec,
-	                             (const Uint8*)src,
-	                             (int)src_bytes,
-	                             &dst_spec,
-	                             &converted,
-	                             &converted_size))
-		return NULL;
-	bytes_per_frame = (int)info->channels * (int)sizeof(int16_t);
-	if (converted_size < 0 || bytes_per_frame <= 0 || converted_size % bytes_per_frame != 0)
-	{
-		SDL_free(converted);
-		return NULL;
-	}
-	converted_frames = (uint32_t)(converted_size / bytes_per_frame);
-	dst = (int16_t*)SDL_malloc((size_t)values * sizeof(int16_t));
-	if (dst == NULL)
-	{
-		SDL_free(converted);
-		return NULL;
-	}
-	(void)rgs_player_stream_copy_exact_s16(dst,
-	                                       info->samples,
-	                                       (const int16_t*)converted,
-	                                       converted_frames,
-	                                       info->channels);
-	SDL_free(converted);
-	return dst;
 }
 
 static void rgs_player_build_envelope(RgsPlayerTrack* track)
@@ -384,6 +333,8 @@ static int rgs_player_load_track(const char* path, RgsPlayerTrack* out)
 	int converted_size = 0;
 	int bytes_per_frame;
 	uint32_t frames;
+	RgsPreparedAudio prepared = {0};
+	const char* prepare_error;
 	size_t bound;
 	RgRgsEncodeOptions options;
 	SDL_PathInfo path_info;
@@ -423,47 +374,53 @@ static int rgs_player_load_track(const char* path, RgsPlayerTrack* out)
 		return 0;
 	}
 	frames = (uint32_t)(converted_size / bytes_per_frame);
-	bound = rg_rgs_encode_bound(frames, (uint32_t)src_spec.channels, (uint32_t)src_spec.freq);
+	prepare_error = rgs_audio_prepare_s16((const int16_t*)converted, frames,
+	                                     (uint32_t)src_spec.channels,
+	                                     (uint32_t)src_spec.freq, &prepared);
+	SDL_free(converted);
+	if (prepare_error != NULL)
+	{
+		SDL_SetError("Could not prepare WAV '%s': %s", path, prepare_error);
+		return 0;
+	}
+	/* Use the exact encoder input as the A/B reference, including the actual
+	 * flushed resampler timeline. There is no second sample-rate conversion. */
+	out->wav_pcm = prepared.pcm;
+	bound = rg_rgs_encode_bound(prepared.frames, prepared.channels, prepared.samplerate);
 	if (bound == 0u)
 	{
-		SDL_free(converted);
+		rgs_player_track_destroy(out);
 		SDL_SetError("WAV is outside the RGS encoder limits: %s", path);
 		return 0;
 	}
 	out->encoded = (uint8_t*)malloc(bound);
 	if (out->encoded == NULL)
 	{
-		SDL_free(converted);
+		rgs_player_track_destroy(out);
 		return 0;
 	}
 	options = rg_rgs_default_options();
 	options.quality = RG_RGS_QUALITY_MEDIUM;
 	options.target_kbps = 0u;
-	out->encoded_size = rg_rgs_encode_s16_ex((const int16_t*)converted,
-	                                         frames,
-	                                         (uint32_t)src_spec.channels,
-	                                         (uint32_t)src_spec.freq,
+	out->encoded_size = rg_rgs_encode_s16_ex(out->wav_pcm,
+	                                         prepared.frames,
+	                                         prepared.channels,
+	                                         prepared.samplerate,
 	                                         out->encoded,
 	                                         bound,
 	                                         &options);
 	if (out->encoded_size == 0u ||
 	    !rg_rgs_read_header(out->encoded, out->encoded_size, &out->info))
 	{
-		SDL_free(converted);
 		rgs_player_track_destroy(out);
 		SDL_SetError("Could not encode a valid in-memory RGS stream: %s", path);
 		return 0;
 	}
-	out->wav_pcm = rgs_player_normalize_reference((const int16_t*)converted,
-	                                              frames,
-	                                              (uint32_t)src_spec.channels,
-	                                              (uint32_t)src_spec.freq,
-	                                              &out->info);
-	SDL_free(converted);
-	if (out->wav_pcm == NULL)
+	if (out->info.samples != prepared.frames || out->info.channels != prepared.channels ||
+	    out->info.samplerate != prepared.samplerate)
 	{
 		rgs_player_track_destroy(out);
-		SDL_SetError("Could not allocate the normalized WAV reference: %s", path);
+		SDL_SetError("Encoded timeline differs from the prepared WAV reference: %s", path);
 		return 0;
 	}
 	if (SDL_GetPathInfo(path, &path_info))
@@ -507,14 +464,14 @@ static int rgs_player_save_track(const RgsPlayerTrack* track)
 		SDL_SetError("Could not create '%s': %s", temporary, strerror(errno));
 		return 0;
 	}
-	if (fwrite(track->encoded, 1u, track->encoded_size, file) == track->encoded_size &&
-	    fflush(file) == 0 && fclose(file) == 0)
-	{
-		file = NULL;
+	success = fwrite(track->encoded, 1u, track->encoded_size, file) == track->encoded_size;
+	if (success)
+		success = fflush(file) == 0;
+	/* fclose consumes the handle even when it reports a flush error. */
+	if (fclose(file) != 0)
+		success = 0;
+	if (success)
 		success = SDL_RenamePath(temporary, track->sidecar_path) ? 1 : 0;
-	}
-	if (file != NULL)
-		fclose(file);
 	if (!success)
 		SDL_RemovePath(temporary);
 	return success;
@@ -1157,45 +1114,53 @@ static int rgs_player_render_frame(SDL_GPUDevice* device,
 {
 	const RgGuiDrawList* draw_list = rg_gui_draw_list(gui);
 	u32 overlay_start = rg_gui_draw_list_overlay_start(gui);
-	RgGuiGpuUpload upload;
+	RgGuiGpuUpload upload = {0};
 	SDL_GPUCommandBuffer* command_buffer;
 	SDL_GPUTexture* swapchain = NULL;
 	u32 width = 0u;
 	u32 height = 0u;
+	int result = 0;
 	rg_gui_renderer_begin_frame(text_renderer);
 	if (!rg_gui_gpu_prepare(gpu, text_renderer, draw_list, overlay_start))
-		return 0;
-	memset(&upload, 0, sizeof(upload));
+		goto done;
 	rg_gpu_upload_ring_begin(upload_ring, 1);
 	if (!rg_gui_gpu_stage_upload(gpu, text_renderer, upload_ring, &upload))
 	{
 		rg_gpu_upload_ring_end(upload_ring);
-		return 0;
+		goto done;
 	}
 	rg_gpu_upload_ring_end(upload_ring);
 	command_buffer = SDL_AcquireGPUCommandBuffer(device);
 	if (command_buffer == NULL)
-		return 0;
+		goto done;
 	if (upload.has_text || upload.has_geometry)
 	{
 		SDL_GPUCopyPass* copy = SDL_BeginGPUCopyPass(command_buffer);
 		if (copy == NULL)
 		{
 			SDL_CancelGPUCommandBuffer(command_buffer);
-			return 0;
+			goto done;
 		}
-		rg_gui_gpu_encode_upload(gpu, text_renderer, copy, upload_ring, &upload);
+		rg_gui_gpu_encode_upload(gpu, copy, upload_ring, &upload);
 		SDL_EndGPUCopyPass(copy);
 	}
-	if (!rg_gui_gpu_dispatch(gpu, command_buffer) ||
-	    !SDL_WaitAndAcquireGPUSwapchainTexture(command_buffer,
+	if (!rg_gui_gpu_dispatch_upload(gpu, command_buffer, &upload) ||
+	    !rg_gui_gpu_upload_ready(gpu, &upload))
+	{
+		SDL_CancelGPUCommandBuffer(command_buffer);
+		SDL_SetError("GUI upload packet is not ready for submission");
+		goto done;
+	}
+	/* Validate before acquiring a swapchain texture: SDL forbids cancelling
+	 * its command buffer after acquisition. No packet state changes intervene. */
+	if (!SDL_WaitAndAcquireGPUSwapchainTexture(command_buffer,
 	                                           window,
 	                                           &swapchain,
 	                                           &width,
 	                                           &height))
 	{
 		SDL_CancelGPUCommandBuffer(command_buffer);
-		return 0;
+		goto done;
 	}
 	if (swapchain != NULL)
 	{
@@ -1210,8 +1175,12 @@ static int rgs_player_render_frame(SDL_GPUDevice* device,
 		pass = SDL_BeginGPURenderPass(command_buffer, &target, 1u, NULL);
 		if (pass == NULL)
 		{
-			SDL_CancelGPUCommandBuffer(command_buffer);
-			return 0;
+			char render_error[512];
+			SDL_strlcpy(render_error, SDL_GetError(), sizeof(render_error));
+			if (SDL_SubmitGPUCommandBuffer(command_buffer))
+				rg_gui_gpu_upload_commit(gpu, &upload);
+			SDL_SetError("Could not begin player render pass: %s", render_error);
+			goto done;
 		}
 		memset(&draw_desc, 0, sizeof(draw_desc));
 		draw_desc.output_width = width;
@@ -1220,7 +1189,16 @@ static int rgs_player_render_frame(SDL_GPUDevice* device,
 		rg_gui_gpu_draw(gpu, command_buffer, pass, &draw_desc, &upload);
 		SDL_EndGPURenderPass(pass);
 	}
-	return SDL_SubmitGPUCommandBuffer(command_buffer) ? 1 : 0;
+	if (SDL_SubmitGPUCommandBuffer(command_buffer))
+	{
+		rg_gui_gpu_upload_commit(gpu, &upload);
+		result = 1;
+	}
+done:
+	/* Commit releases successful packets; abort is harmless for those and
+	 * releases every packet retained by an error or cancellation path. */
+	rg_gui_gpu_upload_abort(gpu, &upload);
+	return result;
 }
 
 typedef struct RgsPlayerUiActions
@@ -1403,7 +1381,7 @@ static int rgs_player_make_smoke_track(RgsPlayerTrack* track)
 	size_t bound;
 	RgRgsEncodeOptions options;
 	memset(track, 0, sizeof(*track));
-	track->wav_pcm = (int16_t*)SDL_malloc((size_t)values * sizeof(int16_t));
+	track->wav_pcm = (int16_t*)malloc((size_t)values * sizeof(int16_t));
 	if (track->wav_pcm == NULL)
 		return 0;
 	for (frame = 0u; frame < frames; ++frame)
@@ -1660,8 +1638,11 @@ int main(int argc, char** argv)
 			goto cleanup;
 		gpu_initialized = 1;
 	}
-	if (!rg_gpu_upload_ring_init(&upload_ring, device, MB(4)))
-		goto cleanup;
+	{
+		const u32 upload_bytes = rg_gui_gpu_upload_ring_size_required(&gpu);
+		if (upload_bytes == 0u || !rg_gpu_upload_ring_init(&upload_ring, device, upload_bytes))
+			goto cleanup;
+	}
 	upload_initialized = 1;
 	rgs_player_cursor_init(&cursor_state);
 	rg_input_init(&input_state);
@@ -1689,7 +1670,7 @@ int main(int argc, char** argv)
 		memset(&actions, 0, sizeof(actions));
 		actions.select_file = -1;
 		actions.source = -1;
-		rg_input_update(&input_state);
+		rg_input_begin_frame(&input_state);
 		rg_input_event_queue_reset(&input_events, SDL_GetModState());
 		while (SDL_PollEvent(&event))
 		{
@@ -1697,6 +1678,7 @@ int main(int argc, char** argv)
 				running = 0;
 			rg_input_process_event_ex(&input_state, &event, &input_events);
 		}
+		rg_input_sample(&input_state);
 		if (rg_input_is_key_pressed(&input_state, SDL_SCANCODE_ESCAPE))
 			running = 0;
 		if (!running)

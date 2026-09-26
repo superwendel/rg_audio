@@ -1,0 +1,4 @@
+quality,assets,baseline_encoded_bytes,candidate_encoded_bytes,baseline_sse,candidate_sse,baseline_severe_frame_channels,candidate_severe_frame_channels,introduced_severe_frame_channels,resolved_severe_frame_channels,frame_error_regressions,candidate_encode_sum_per_file_median_ms,file_quality_regressions,encoded_size_ratio,baseline_encode_sum_per_file_median_ms,screening_encode_time_ratio,median_snr_change_db
+high,151,172577756,172577756,4062729893947.0,3952915952982.0,4,5,2,1,2,14719.08539989,0,1.0,12964.266600077,1.1353581235210464,0.0
+medium,151,131541680,131625224,9031997992015.0,8226446805712.0,8,5,2,5,0,32496.736299812,0,1.000635114284689,28727.253500147,1.1312162612289307,0.0
+low,151,130136700,130651244,18245392889206.0,15428514722639.0,93,3,0,90,3,33741.632299917,0,1.0039538731195734,28785.521799923,1.1721737245008794,0.0

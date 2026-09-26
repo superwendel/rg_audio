@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "purpose": "Release C measurement provenance after a C++-only initializer compatibility adjustment.",
+  "measured_header": {
+    "source": "benchmarks/baselines/rg_rgs_2026_09_26_measured.h",
+    "sha256": "ecff374dd626bde76ad2e0b26c257b3b828949295ac6b3c838d53490de19f20e"
+  },
+  "final_header": {
+    "source": "src/rg_rgs.h",
+    "sha256": "c815225f3124541c038b6d9249a1d65ddf78b22843de4133f05ab9da21d94afc"
+  },
+  "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.44.35219 for x64",
+  "compiler_executable_sha256": "69106b595bec828cbf942321f98a0cd3a1fc7d6b8460b0b6b7a07a387fcb309c",
+  "flags": "/nologo /std:c11 /W4 /WX /O2 /EP",
+  "normalization": "MSVC /EP omits line directives. Remove blank lines and normalize CRLF to LF only; preserve every nonblank byte, including whitespace, tokens, literals, and pragmas.",
+  "translation_units": [
+    {
+      "source": "benchmarks/codec_adapter.c",
+      "source_sha256": "91e86ae965907c7990ff8c3b7a5a69fc8f12cc0638da150ed9852de1e3fa0b97",
+      "measured_preprocessed_sha256": "b5c8d02c4c3abec9314454d941dfbb51f688afd61189b0d223f5164c7e832b39",
+      "final_preprocessed_sha256": "b5c8d02c4c3abec9314454d941dfbb51f688afd61189b0d223f5164c7e832b39",
+      "normalized_bytes": 1190781,
+      "identical": true
+    },
+    {
+      "source": "benchmarks/decode_profile.c",
+      "source_sha256": "65226a7fdfbb34fea09cf6777500253158e474023972c1c35fe3899da9201644",
+      "measured_preprocessed_sha256": "86e6fb6cfa49729429f325ee7cfafdf63d0809d2d055c2faf8472d812486e81a",
+      "final_preprocessed_sha256": "86e6fb6cfa49729429f325ee7cfafdf63d0809d2d055c2faf8472d812486e81a",
+      "normalized_bytes": 1741076,
+      "identical": true
+    }
+  ],
+  "all_identical": true
+}

@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: superwendel/rg_core
-          ref: 27d5475a4af221813977f4b7d62e4e3f88cffab2
+          ref: d5d3f4413da22568572a37f5c6bf4e0506c68a2a
           path: _deps/rg_core
           persist-credentials: false
 
@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: superwendel/rg_gui
-          ref: cf79949550c8cbecf7ed2e206e2b95e88c3ab09e
+          ref: f7a65957787159d8f25c6ee9f2ca41dbec6c76e7
           path: _deps/rg_gui
           persist-credentials: false
 
@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: superwendel/rg_text
-          ref: 0161dfd1790e9469a39c734fa61cb5640a36fd51
+          ref: 5331db7dee83338dacbf8f2e7b90d69acb60bac1
           path: _deps/rg_text
           persist-credentials: false
 
@@ -122,6 +122,10 @@ jobs:
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $prefix 'bin')
           Add-Content -Path $env:GITHUB_PATH -Value (Split-Path -Parent $shadercross)
 
+      - name: Build pinned audio preprocessing and comparison libraries
+        shell: pwsh
+        run: python tools/build_audio_deps.py
+
       - name: Run tests and compile optional tools and shaders
         shell: pwsh
         run: cmd.exe /d /c build.bat test_ci
@@ -137,8 +141,8 @@ jobs:
           foreach ($entry in $formats.GetEnumerator()) {
             $directory = Join-Path $env:GITHUB_WORKSPACE "shaders\Compiled\$($entry.Key)"
             $files = @(Get-ChildItem -LiteralPath $directory -File -Filter $entry.Value)
-            if ($files.Count -ne 6) {
-              throw "Expected 6 $($entry.Key) shaders, found $($files.Count)."
+            if ($files.Count -ne 8) {
+              throw "Expected 8 $($entry.Key) shaders, found $($files.Count)."
             }
             if ($files | Where-Object { $_.Length -eq 0 }) {
               throw "$($entry.Key) contains an empty shader output."
@@ -171,6 +175,7 @@ jobs:
             'test_rgs_allocator.exe',
             'test_rgs_cpp.exe',
             'test_rgs_stream.exe',
+            'test_rgs_audio_prepare.exe',
             'test_rgs_tools.exe',
             'test_rgs_player_stream.exe',
             'example_rgs.exe',
@@ -210,7 +215,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: superwendel/rg_core
-          ref: 27d5475a4af221813977f4b7d62e4e3f88cffab2
+          ref: d5d3f4413da22568572a37f5c6bf4e0506c68a2a
           path: _deps/rg_core
           persist-credentials: false
 
@@ -265,8 +270,19 @@ jobs:
           )
           gcc "${common[@]}" tests/bench_rgs.c -lm -o "$output_dir/bench_rgs"
           gcc "${common[@]}" tests/bench_rgs_stream.c -lm -o "$output_dir/bench_rgs_stream"
-          "$output_dir/bench_rgs" --iters 2
-          "$output_dir/bench_rgs_stream" --iters 2
+          "$output_dir/bench_rgs" --iters 2 | tee "$output_dir/codec.txt"
+          "$output_dir/bench_rgs_stream" --iters 2 | tee "$output_dir/stream.txt"
+          if "$output_dir/bench_rgs_stream" --iters 1 --callback-frames 30000; then
+            echo "Oversized callback must fail" >&2
+            exit 1
+          fi
+
+      - name: Archive diagnostic measurements
+        if: matrix.cc == 'gcc'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: rg-audio-benchmark-smoke
+          path: ${{ runner.temp }}/rg-audio-bench/*.txt
 
   sanitizers:
     name: Linux / Clang ASan + UBSan + bounded fuzzing
@@ -285,7 +301,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: superwendel/rg_core
-          ref: 27d5475a4af221813977f4b7d62e4e3f88cffab2
+          ref: d5d3f4413da22568572a37f5c6bf4e0506c68a2a
           path: _deps/rg_core
           persist-credentials: false
 
@@ -367,7 +383,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: superwendel/rg_core
-          ref: 27d5475a4af221813977f4b7d62e4e3f88cffab2
+          ref: d5d3f4413da22568572a37f5c6bf4e0506c68a2a
           path: _deps/rg_core
           persist-credentials: false
 
@@ -375,7 +391,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: superwendel/rg_gui
-          ref: cf79949550c8cbecf7ed2e206e2b95e88c3ab09e
+          ref: f7a65957787159d8f25c6ee9f2ca41dbec6c76e7
           path: _deps/rg_gui
           persist-credentials: false
 
@@ -383,7 +399,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: superwendel/rg_text
-          ref: 0161dfd1790e9469a39c734fa61cb5640a36fd51
+          ref: 5331db7dee83338dacbf8f2e7b90d69acb60bac1
           path: _deps/rg_text
           persist-credentials: false
 
@@ -396,13 +412,18 @@ jobs:
           install-linux-dependencies: true
           add-to-environment: true
 
+      - name: Build pinned audio preprocessing and comparison libraries
+        run: python3 tools/build_audio_deps.py
+
       - name: Compile optional SDL3 tools without device execution
         shell: bash
         run: |
           set -euo pipefail
           output_dir="$RUNNER_TEMP/rg-audio-player"
           mkdir -p "$output_dir"
+          audio_prefix="$GITHUB_WORKSPACE/build/deps/install"
           sdl_prefix='${{ steps.sdl.outputs.prefix }}'
+          export LD_LIBRARY_PATH="$audio_prefix/lib:$audio_prefix/lib64:$sdl_prefix/lib:$sdl_prefix/lib64:${LD_LIBRARY_PATH:-}"
           export PKG_CONFIG_PATH="$sdl_prefix/lib/pkgconfig:$sdl_prefix/lib64/pkgconfig:$sdl_prefix/share/pkgconfig:${PKG_CONFIG_PATH:-}"
           test -f "$sdl_prefix/include/SDL3/SDL.h"
           read -r -a sdl_libs <<< "$(pkg-config --libs sdl3)"
@@ -416,6 +437,9 @@ jobs:
             -I src
             -I "$RG_CORE_DIR/src"
             -isystem "$sdl_prefix/include"
+            -isystem "$audio_prefix/include"
+            -L "$audio_prefix/lib"
+            -L "$audio_prefix/lib64"
           )
           player=(
             "${common[@]}"
@@ -423,10 +447,23 @@ jobs:
             -I "$RG_TEXT_DIR/src"
           )
 
-          gcc "${common[@]}" tools/rgs_convert.c "${sdl_libs[@]}" -lm \
+          gcc "${common[@]}" tools/rgs_convert.c "${sdl_libs[@]}" -lsoxr -lm \
             -o "$output_dir/rgs_convert"
           gcc "${common[@]}" tests/test_rgs_player_stream.c -lm \
             -o "$output_dir/test_rgs_player_stream"
-          gcc "${player[@]}" tools/rgs_player.c "${sdl_libs[@]}" -lm \
+          gcc "${player[@]}" tools/rgs_player.c "${sdl_libs[@]}" -lsoxr -lm \
             -o "$output_dir/rgs_player"
+          gcc "${common[@]}" tests/test_rgs_audio_prepare.c -lsoxr -lm -o "$output_dir/test_prepare"
+          "$output_dir/test_prepare"
+          gcc "${common[@]}" tests/test_rgs_tools.c -lm -o "$output_dir/test_tools"
+          "$output_dir/test_tools" "$output_dir/rgs_convert"
+          mkdir -p build/bench
+          gcc "${common[@]}" benchmarks/codec_adapter.c -lsoxr -lsndfile -lm -o build/bench/codec_candidate.exe
+          gcc "${common[@]}" benchmarks/stream_workload.c -lm -o build/bench/stream_candidate.exe
+          gcc "${common[@]}" benchmarks/playback_resample.c "${sdl_libs[@]}" -lsndfile -lm -o build/bench/playback_resample
+          mkdir -p build/decode-profile
+          gcc "${common[@]}" benchmarks/decode_profile.c -lm -o build/decode-profile/candidate.exe
+          python3 -m venv "$output_dir/python-env"
+          "$output_dir/python-env/bin/python" -m pip install numpy==2.2.6
+          "$output_dir/python-env/bin/python" -m unittest discover -s benchmarks -p 'test_*.py'
           echo 'The optional player and stream engine were compiled but no GPU or audio device was opened.'

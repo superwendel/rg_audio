@@ -13,7 +13,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "../src/rg_rgs.h"
+#ifndef RG_RGS_HEADER
+#define RG_RGS_HEADER "../src/rg_rgs.h"
+#endif
+#include RG_RGS_HEADER
+#include "rg_time.h"
 
 #include <errno.h>
 #include <stdint.h>
@@ -41,20 +45,7 @@ static volatile uint64_t stream_sink = 0u;
 
 static double stream_now_ms(void)
 {
-#if defined(_WIN32)
-	static LARGE_INTEGER frequency;
-	LARGE_INTEGER counter;
-	if (frequency.QuadPart == 0)
-	{
-		(void)QueryPerformanceFrequency(&frequency);
-	}
-	(void)QueryPerformanceCounter(&counter);
-	return (double)counter.QuadPart * 1000.0 / (double)frequency.QuadPart;
-#else
-	struct timespec value;
-	(void)clock_gettime(CLOCK_MONOTONIC, &value);
-	return (double)value.tv_sec * 1000.0 + (double)value.tv_nsec / 1000000.0;
-#endif
+	return rg_time_ms();
 }
 
 static int stream_read_file(const char* path, uint8_t** out_data, size_t* out_size)
@@ -326,7 +317,7 @@ static int stream_bench_ring(const uint8_t* data,
 					}
 				}
 				copy_ms += stream_now_ms() - started;
-				if (copied == 0u)
+				if (copied != request)
 				{
 					free(callback_pcm);
 					free(slot_storage);
@@ -446,6 +437,7 @@ static void stream_usage(const char* executable)
 
 int main(int argc, char** argv)
 {
+	rg_time_init();
 	uint32_t iterations = 5u;
 	uint32_t callback_frames = 512u;
 	int file_count = 0;

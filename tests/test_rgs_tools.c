@@ -40,13 +40,12 @@ static void write_u32le(FILE* file, uint32_t value)
 	(void)fwrite(bytes, 1u, sizeof(bytes), file);
 }
 
-static int write_test_wav(const char* path)
+static int write_test_wav(const char* path, uint32_t samplerate)
 {
 	enum
 	{
 		CHANNELS = 2,
-		FRAMES = 257,
-		SAMPLERATE = 48000
+		FRAMES = 257
 	};
 	const uint32_t data_size = FRAMES * CHANNELS * (uint32_t)sizeof(int16_t);
 	FILE* file = fopen(path, "wb");
@@ -61,8 +60,8 @@ static int write_test_wav(const char* path)
 	write_u32le(file, 16u);
 	write_u16le(file, 1u);
 	write_u16le(file, CHANNELS);
-	write_u32le(file, SAMPLERATE);
-	write_u32le(file, SAMPLERATE * CHANNELS * (uint32_t)sizeof(int16_t));
+	write_u32le(file, samplerate);
+	write_u32le(file, samplerate * CHANNELS * (uint32_t)sizeof(int16_t));
 	write_u16le(file, CHANNELS * (uint16_t)sizeof(int16_t));
 	write_u16le(file, 16u);
 	(void)fwrite("data", 1u, 4u, file);
@@ -172,7 +171,7 @@ int main(int argc, char** argv)
 	(void)remove(output_path);
 	(void)remove(invalid_path);
 
-	CHECK(write_test_wav(input_path));
+	CHECK(write_test_wav(input_path, 48000u));
 	CHECK(run_converter(argv[1], input_path, output_path, "--quality high --target-kbps 180"));
 	/* Replacing an existing destination exercises the atomic publish path. */
 	CHECK(run_converter(argv[1], input_path, output_path, "--quality low --target-kbps 128"));
@@ -184,7 +183,7 @@ int main(int argc, char** argv)
 		CHECK(rg_rgs_read_header(encoded, encoded_size, &info));
 		CHECK(info.channels == 2u);
 		CHECK(info.samplerate == RG_RGS_MAX_STORED_SAMPLERATE);
-		CHECK(info.samples > 0u);
+		CHECK(info.samples == 236u);
 		decoded_values = (size_t)info.samples * info.channels;
 		decoded = (int16_t*)malloc(decoded_values * sizeof(int16_t));
 		CHECK(decoded != NULL);
@@ -210,6 +209,26 @@ int main(int argc, char** argv)
 
 	free(decoded);
 	free(encoded);
+	{
+		const uint32_t rates[] = {22050u, 44100u, 96000u, 192000u};
+		size_t rate_index;
+		for (rate_index = 0u; rate_index < sizeof(rates) / sizeof(rates[0]); ++rate_index)
+		{
+			const uint32_t source_rate = rates[rate_index];
+			const uint32_t stored_rate = source_rate > 44100u ? 44100u : source_rate;
+			const uint32_t expected_frames = (uint32_t)(((uint64_t)257u * stored_rate + source_rate / 2u) / source_rate);
+			encoded = NULL;
+			CHECK(write_test_wav(input_path, source_rate));
+			CHECK(run_converter(argv[1], input_path, output_path, "--quality medium"));
+			CHECK(read_file(output_path, &encoded, &encoded_size));
+			if (encoded != NULL)
+			{
+				CHECK(rg_rgs_read_header(encoded, encoded_size, &info));
+				CHECK(info.samplerate == stored_rate && info.samples == expected_frames && info.channels == 2u);
+				free(encoded);
+			}
+		}
+	}
 	(void)remove(invalid_path);
 	(void)remove(output_path);
 	(void)remove(input_path);

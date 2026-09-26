@@ -1,0 +1,25 @@
+{
+  "compiler": "MSVC 19.44.35219 for x64",
+  "flags": "/std:c11 /W4 /WX /O2 (baseline additionally selects frozen header)",
+  "source_hash_note": "Source hashes were captured when the measurement records were archived.",
+  "sha256": {
+    "benchmarks/stream_workload.c": "4f3976e4b4f21aa172611afe4b51eb72b923d35ab92366ee4924e97b880a4aa9",
+    "benchmarks/run_stream_workloads.py": "0d3679b09d7ba38ad712ecffd7793768314b9256bc0f60ce3e1c16ce65eaef9c",
+    "benchmarks/playback_resample.c": "fa30110b3262c8608c816ab7de40ca1f2012b4021d16ef97173545706e79c793",
+    "benchmarks/run_playback_resample.py": "fa6c26949796b1c75bdf77066703c6e34faa532c4da3578b376716e2122890b5",
+    "src/rg_rgs.h": "b26f6be89db4fe6cfbbd6cab95e6c69ff986850673e48317390867b75c36702e",
+    "build/baseline/src/rg_rgs.h": "a7d43578a678d0489cfa3b8e84ea62da4f6a83c17a5c7b7395a897ff5311ff21",
+    "build/bench/stream_candidate.exe": "104419a6330b4f986f221fb43d74ec34ae0d041f9f63ebd452d2129ace79ba1e",
+    "build/bench/stream_baseline.exe": "fdf004d9073966e8ff60535396a2aa87481f25dfea3082c4e49d0555d7abda0a",
+    "build/bench/playback_resample.exe": "49f1ba94c47be9d350a6e23841ebe13bd40028ccdf6f8a4647ff95421cc200a8"
+  },
+  "stream_inputs": {
+    "footstep": "oculus_audio_pack/footsteps_shoe_concrete_run_04.wav",
+    "rain": "oculus_audio_pack/ambient_city_rain_lp.wav"
+  },
+  "quality": "medium",
+  "trials_per_case": 7,
+  "stream_trials": 1008,
+  "playback_trials": 42,
+  "publication_note": "Local invocation and installation details are omitted. Source paths are repository-relative; dependency paths identify the dependency. Artifact names identify local build outputs, which are not redistributed. Hashes identify measured bytes and may differ from current repository files. The retained baseline header has been relocated without changing its bytes."
+}

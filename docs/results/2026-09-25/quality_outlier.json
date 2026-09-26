@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "asset": "oculus_audio_pack/ambience_forest_birds_03.wav",
+  "lane": "normalized",
+  "revision": "candidate",
+  "method": "Read-only analysis of existing PCM16 WAV and RGS exports; no re-encoding or performance measurement. Python frame replay uses mathematical floor and unbounded integer intermediates.",
+  "analyzer_sha256": "bf96471e9965cab2d622e9e50d88cebb06326db75b69393f221c38c4a2464159",
+  "codec_header_sha256": "b26f6be89db4fe6cfbbd6cab95e6c69ff986850673e48317390867b75c36702e",
+  "source": {
+    "prepared_path": "build/benchmark-results/prepared/35a676da9a462a0c9fef.wav",
+    "sha256": "7b0004c75063d8d378777ab84d269dbe56ab16f4de1d40bc1bcce1f91fe1f989",
+    "rate": 44100,
+    "frames": 133123,
+    "channels": 1,
+    "full_scale_samples": 0
+  },
+  "presets": [
+    {
+      "quality": "high",
+      "encoded_path": "build/benchmark-results/listening/35a676da9a462a0c9fef_normalized_candidate_rgs_high.rgs",
+      "decoded_path": "build/benchmark-results/listening/35a676da9a462a0c9fef_normalized_candidate_rgs_high.wav",
+      "encoded_bytes": 53916,
+      "encoded_sha256": "1cc93f44614e550b1d89fb5503709ece624a9b725c6f9e011a49ffb596d2043c",
+      "decoded_sha256": "bf8012cedec4d4e5d9c1648af3b92b80f6b2e280c5a6d3f19c23b9ff771e9986",
+      "baseline_comparison": {
+        "encoded_sha256": "1cc93f44614e550b1d89fb5503709ece624a9b725c6f9e011a49ffb596d2043c",
+        "decoded_sha256": "bf8012cedec4d4e5d9c1648af3b92b80f6b2e280c5a6d3f19c23b9ff771e9986",
+        "encoded_identical": true,
+        "decoded_pcm_identical": true
+      },
+      "snr_db": 14.367095791809518,
+      "segmental_snr_db": 27.920720412419197,
+      "total_squared_error": 37729847678.0,
+      "decoded_full_scale_samples": 23,
+      "worst_error": {
+        "sample_frame": 94651,
+        "channel": 0,
+        "source_sample": -17604,
+        "decoded_sample": 32767,
+        "absolute_error": 50371
+      },
+      "selected_frame": {
+        "zero_based_index": 18,
+        "start_sample_frame": 92160,
+        "end_sample_frame_exclusive": 97280,
+        "start_seconds": 2.089795918367347,
+        "end_seconds": 2.2058956916099772,
+        "squared_error": 37063843121.0,
+        "percent_of_total_squared_error": 98.23480719380602,
+        "source_full_scale_samples": 0,
+        "decoded_full_scale_samples": 23,
+        "decoded_full_scale_without_source_full_scale_samples": 23,
+        "saturation_events": 23,
+        "two_bit_slices": 0,
+        "max_absolute_predictor_weight": 24111,
+        "replay_matches_exported_pcm": true,
+        "end_state_matches_next_serialized_state": true
+      }
+    },
+    {
+      "quality": "medium",
+      "encoded_path": "build/benchmark-results/listening/35a676da9a462a0c9fef_normalized_candidate_rgs_medium.rgs",
+      "decoded_path": "build/benchmark-results/listening/35a676da9a462a0c9fef_normalized_candidate_rgs_medium.wav",
+      "encoded_bytes": 41274,
+      "encoded_sha256": "b960d8f8d9c23f54fc70f71fcf03ccae7c890ed940415ff2708440423bd8feb5",
+      "decoded_sha256": "ad3ad5525a49c11de5e35573443845e146414287d6cb17aecf032d131ea62a09",
+      "baseline_comparison": {
+        "encoded_sha256": "b960d8f8d9c23f54fc70f71fcf03ccae7c890ed940415ff2708440423bd8feb5",
+        "decoded_sha256": "ad3ad5525a49c11de5e35573443845e146414287d6cb17aecf032d131ea62a09",
+        "encoded_identical": true,
+        "decoded_pcm_identical": true
+      },
+      "snr_db": 2.8699235709876794,
+      "segmental_snr_db": 20.46382681316411,
+      "total_squared_error": 532601363540.0,
+      "decoded_full_scale_samples": 392,
+      "worst_error": {
+        "sample_frame": 96600,
+        "channel": 0,
+        "source_sample": -26604,
+        "decoded_sample": 32767,
+        "absolute_error": 59371
+      },
+      "selected_frame": {
+        "zero_based_index": 18,
+        "start_sample_frame": 92160,
+        "end_sample_frame_exclusive": 97280,
+        "start_seconds": 2.089795918367347,
+        "end_seconds": 2.2058956916099772,
+        "squared_error": 529051649015.0,
+        "percent_of_total_squared_error": 99.3335138120176,
+        "source_full_scale_samples": 0,
+        "decoded_full_scale_samples": 392,
+        "decoded_full_scale_without_source_full_scale_samples": 392,
+        "saturation_events": 392,
+        "two_bit_slices": 204,
+        "max_absolute_predictor_weight": 25536,
+        "replay_matches_exported_pcm": true,
+        "end_state_matches_next_serialized_state": true
+      }
+    },
+    {
+      "quality": "low",
+      "encoded_path": "build/benchmark-results/listening/35a676da9a462a0c9fef_normalized_candidate_rgs_low.rgs",
+      "decoded_path": "build/benchmark-results/listening/35a676da9a462a0c9fef_normalized_candidate_rgs_low.wav",
+      "encoded_bytes": 40726,
+      "encoded_sha256": "ca376f431716180ecf5d66121c7f009b7b4d5f6d6518dad601d37cef5d76fe64",
+      "decoded_sha256": "99b7ec25708181a316bcd992e4e6996897e01b151a1159869095414d7d2e9d05",
+      "baseline_comparison": {
+        "encoded_sha256": "ca376f431716180ecf5d66121c7f009b7b4d5f6d6518dad601d37cef5d76fe64",
+        "decoded_sha256": "99b7ec25708181a316bcd992e4e6996897e01b151a1159869095414d7d2e9d05",
+        "encoded_identical": true,
+        "decoded_pcm_identical": true
+      },
+      "snr_db": 19.118942394278257,
+      "segmental_snr_db": 20.505593713859756,
+      "total_squared_error": 12632822430.0,
+      "decoded_full_scale_samples": 6,
+      "worst_error": {
+        "sample_frame": 96546,
+        "channel": 0,
+        "source_sample": 6381,
+        "decoded_sample": 32767,
+        "absolute_error": 26386
+      },
+      "selected_frame": {
+        "zero_based_index": 18,
+        "start_sample_frame": 92160,
+        "end_sample_frame_exclusive": 97280,
+        "start_seconds": 2.089795918367347,
+        "end_seconds": 2.2058956916099772,
+        "squared_error": 8142655024.0,
+        "percent_of_total_squared_error": 64.4563403714367,
+        "source_full_scale_samples": 0,
+        "decoded_full_scale_samples": 6,
+        "decoded_full_scale_without_source_full_scale_samples": 6,
+        "saturation_events": 6,
+        "two_bit_slices": 210,
+        "max_absolute_predictor_weight": 22927,
+        "replay_matches_exported_pcm": true,
+        "end_state_matches_next_serialized_state": true
+      }
+    }
+  ],
+  "observations": {
+    "all_frame_replays_match_exported_pcm": true,
+    "all_frame_end_states_match_next_serialized_state": true,
+    "all_presets_identical_to_baseline": true
+  },
+  "interpretation": "Preset names do not guarantee monotonic whole-asset error: local width decisions also change future predictor state. Full-scale output counts are distinguished from source full-scale values and actual saturation events in the independent replay. Matching replay and next-frame state indicate consistent decoding/serialization for this frame; severe error can still be an encoder-quality defect. Inspect per-asset outliers and listen before choosing a preset; retain PCM or another codec as a fallback.",
+  "publication_note": "Local invocation and installation details are omitted. Source paths are repository-relative; dependency paths identify the dependency. Artifact names identify local build outputs, which are not redistributed. Hashes identify measured bytes and may differ from current repository files. The retained baseline header has been relocated without changing its bytes."
+}

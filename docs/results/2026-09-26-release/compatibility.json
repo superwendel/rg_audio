@@ -1,0 +1,21 @@
+{
+  "old_streams_decoded_by_current": {
+    "assets": 151,
+    "encodings": 453,
+    "modes": [
+      "checked"
+    ],
+    "cases": 453,
+    "all_fingerprints_match": true,
+    "raw_sha256": "270f41de80cba108f4b424610ac73aa4504db2bc8be7ffc90f736f55014d420e",
+    "report_sha256": "352f8fdf55102454ff6caff4410389860b0fb4df9d2c39403bc3e48f06cebdb0"
+  },
+  "new_streams_decoded_by_pre_quality_decoder": {
+    "assets": 151,
+    "encodings": 453,
+    "trials_per_encoding": 7,
+    "checked_cases": 3171,
+    "all_fingerprints_match": true
+  },
+  "fingerprint_note": "FNV-1a 64-bit fingerprints check output consistency; they are not cryptographic byte comparisons."
+}

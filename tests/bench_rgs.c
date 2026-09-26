@@ -11,7 +11,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "../src/rg_rgs.h"
+#ifndef RG_RGS_HEADER
+#define RG_RGS_HEADER "../src/rg_rgs.h"
+#endif
+#include RG_RGS_HEADER
+#include "rg_time.h"
 
 #if defined(_MSC_VER)
 #pragma warning(push)
@@ -51,20 +55,7 @@ static volatile uint64_t bench_sink = 0u;
 
 static double bench_now_ms(void)
 {
-#if defined(_WIN32)
-	static LARGE_INTEGER frequency;
-	LARGE_INTEGER counter;
-	if (frequency.QuadPart == 0)
-	{
-		(void)QueryPerformanceFrequency(&frequency);
-	}
-	(void)QueryPerformanceCounter(&counter);
-	return (double)counter.QuadPart * 1000.0 / (double)frequency.QuadPart;
-#else
-	struct timespec value;
-	(void)clock_gettime(CLOCK_MONOTONIC, &value);
-	return (double)value.tv_sec * 1000.0 + (double)value.tv_nsec / 1000000.0;
-#endif
+	return rg_time_ms();
 }
 
 static uint16_t bench_read_u16le(const uint8_t* bytes)
@@ -486,6 +477,7 @@ static void bench_usage(const char* executable)
 
 int main(int argc, char** argv)
 {
+	rg_time_init();
 	RgRgsEncodeOptions options = rg_rgs_default_options();
 	uint32_t iterations = 3u;
 	int file_count = 0;
