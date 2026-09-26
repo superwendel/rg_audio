@@ -60,6 +60,8 @@ jobs:
           repository: microsoft/vcpkg
           ref: 91e8cb4be8195112ea3a9c7e5846bd0b3ff74673
           path: _deps/vcpkg
+          # Versioned ports can reference trees outside the baseline commit.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Initialize vcpkg paths
@@ -435,7 +437,7 @@ jobs:
             -Werror
             -DRG_SPRINTF_NO_ASM
             -I src
-            -I "$RG_CORE_DIR/src"
+            -isystem "$RG_CORE_DIR/src"
             -isystem "$sdl_prefix/include"
             -isystem "$audio_prefix/include"
             -L "$audio_prefix/lib"
@@ -443,8 +445,8 @@ jobs:
           )
           player=(
             "${common[@]}"
-            -I "$RG_GUI_DIR/src"
-            -I "$RG_TEXT_DIR/src"
+            -isystem "$RG_GUI_DIR/src"
+            -isystem "$RG_TEXT_DIR/src"
           )
 
           gcc "${common[@]}" tools/rgs_convert.c "${sdl_libs[@]}" -lsoxr -lm \

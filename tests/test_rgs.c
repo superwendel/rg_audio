@@ -239,7 +239,8 @@ static void test_roundtrip_case(uint32_t frames, uint32_t channels, uint32_t rat
 	int16_t* pcm = (int16_t*)malloc(values * sizeof(int16_t));
 	uint8_t* encoded = NULL;
 	size_t encoded_size = 0u;
-	RgRgsInfo info;
+	RgRgsInfo info = {0};
+	int header_valid;
 	uint32_t stored_frames;
 	int16_t* checked;
 	int16_t* trusted;
@@ -264,7 +265,14 @@ static void test_roundtrip_case(uint32_t frames, uint32_t channels, uint32_t rat
 	CHECK(encoded[8] == 1u);
 	CHECK(encoded[9] == 7u);
 	CHECK(encoded[10] == 0u && encoded[11] == 0u);
-	CHECK(rg_rgs_read_header(encoded, encoded_size, &info));
+	header_valid = rg_rgs_read_header(encoded, encoded_size, &info);
+	CHECK(header_valid);
+	if (!header_valid)
+	{
+		free(encoded);
+		free(pcm);
+		return;
+	}
 	stored_frames = frames;
 	CHECK(info.channels == channels);
 	CHECK(info.samplerate == rate);

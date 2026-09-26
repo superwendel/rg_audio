@@ -222,18 +222,6 @@ ADPCM, including a frozen RGS baseline. Measurements do not impose a
 machine-dependent performance threshold. See
 [docs/benchmarks.md](docs/benchmarks.md).
 
-## Dependency baseline
-
-| Dependency | Tested revision |
-| --- | --- |
-| `rg_core` | `d5d3f4413da22568572a37f5c6bf4e0506c68a2a` |
-| `rg_gui` (optional player) | `f7a65957787159d8f25c6ee9f2ca41dbec6c76e7` |
-| `rg_text` (optional player) | `5331db7dee83338dacbf8f2e7b90d69acb60bac1` |
-| libsoxr (asset tools) | 0.1.3, archive hash pinned in `tools/build_audio_deps.py` |
-| libsndfile (comparison tools) | 1.2.2, archive hash pinned in `tools/build_audio_deps.py` |
-| vcpkg ports | baseline `91e8cb4be8195112ea3a9c7e5846bd0b3ff74673` |
-| SDL3 | release 3.4.14, commit `147a8ee32dbf9ac02f3794964490687b6bbda1bc` |
-
 ## Third-party code, license, and trademark
 
 The RGS predictor and tables are QOA-derived and retain Dominic Szablewski's
