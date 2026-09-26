@@ -17,6 +17,21 @@ See [performance and quality](docs/performance.md) for codec comparisons,
 measurement conditions, and known limitations, and the [changelog](CHANGELOG.md)
 for release notes.
 
+The [RGS articles](docs/posts/README.md) introduce the design, compare codec
+size and decode time, and explain the v1 format byte by byte with a printable
+specification.
+
+## Where RGS fits
+
+![RGS above QOA in the Triangle of Neglect, alongside Opus, Vorbis, MP3, WavPack, FLAC, ADPCM, and PCM.](docs/posts/assets/rgs-codec-landscape.png)
+
+Adapted from [Dominic Szablewski's QOA chart](https://phoboslab.org/log/2023/02/qoa-time-domain-audio-compression).
+The vertical axis shows subjective format/decoder complexity, not measured
+decode time. Quality labels are subjective; the chart rates RGS as "good".
+See the [design article](docs/posts/rgs-game-audio.md#where-rgs-fits)
+for the placement and bitrate assumptions, and
+[performance results](docs/performance.md) for measured comparisons.
+
 ## Quick start
 
 ```c
@@ -127,6 +142,9 @@ Realtime ownership and ring-buffer guidance is in
 
 ## Tools
 
+The tools and benchmarks reuse `rg_core` modules including `rg_bin`,
+`rg_algo`, and `rg_time`.
+
 From a Visual Studio Developer Command Prompt, with sibling `rg_core` or an
 explicit `RG_CORE_DIR`:
 
@@ -156,6 +174,17 @@ Windows builds stage the selected `SDL3.dll` beside each tool to keep an
 older system installation from overriding it. Set `SDL3_DIR` to the SDL
 development package, or provide `SDL3_INCLUDE_DIR`, `SDL3_LIB_DIR`, and
 `SDL3_BIN_DIR` explicitly.
+
+After preparing the audio dependencies and SDL3, build the player with:
+
+```bat
+build.bat rgs_player
+```
+
+This target also compiles the GUI shaders. It finds `shadercross.exe` through
+the vcpkg installation paths or `PATH`; set `SHADERCROSS_EXE` to its full path
+if it is installed elsewhere. The shader compiler must support the DXIL,
+SPIR-V, and MSL outputs used by the player.
 
 To listen from Command Prompt, pass a WAV file or a folder containing WAVs:
 

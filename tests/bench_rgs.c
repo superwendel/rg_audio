@@ -15,6 +15,7 @@
 #define RG_RGS_HEADER "../src/rg_rgs.h"
 #endif
 #include RG_RGS_HEADER
+#include "rg_bin.h"
 #include "rg_time.h"
 
 #if defined(_MSC_VER)
@@ -56,17 +57,6 @@ static volatile uint64_t bench_sink = 0u;
 static double bench_now_ms(void)
 {
 	return rg_time_ms();
-}
-
-static uint16_t bench_read_u16le(const uint8_t* bytes)
-{
-	return (uint16_t)((uint16_t)bytes[0] | ((uint16_t)bytes[1] << 8u));
-}
-
-static uint32_t bench_read_u32le(const uint8_t* bytes)
-{
-	return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8u) |
-	       ((uint32_t)bytes[2] << 16u) | ((uint32_t)bytes[3] << 24u);
 }
 
 static int bench_read_file(const char* path, uint8_t** out_data, size_t* out_size)
@@ -127,7 +117,7 @@ static int bench_load_pcm16_wav(const char* path, BenchAudio* out_audio)
 	while (cursor <= file_size && file_size - cursor >= 8u)
 	{
 		const uint8_t* id = file_data + cursor;
-		const uint32_t chunk_size = bench_read_u32le(file_data + cursor + 4u);
+		const uint32_t chunk_size = rg_bin_load_u32_le(file_data + cursor + 4u);
 		cursor += 8u;
 		if ((size_t)chunk_size > file_size - cursor)
 		{
@@ -136,10 +126,10 @@ static int bench_load_pcm16_wav(const char* path, BenchAudio* out_audio)
 		}
 		if (memcmp(id, "fmt ", 4u) == 0 && chunk_size >= 16u)
 		{
-			format = bench_read_u16le(file_data + cursor);
-			channels = bench_read_u16le(file_data + cursor + 2u);
-			samplerate = bench_read_u32le(file_data + cursor + 4u);
-			bits = bench_read_u16le(file_data + cursor + 14u);
+			format = rg_bin_load_u16_le(file_data + cursor);
+			channels = rg_bin_load_u16_le(file_data + cursor + 2u);
+			samplerate = rg_bin_load_u32_le(file_data + cursor + 4u);
+			bits = rg_bin_load_u16_le(file_data + cursor + 14u);
 		}
 		else if (memcmp(id, "data", 4u) == 0 && pcm_bytes == NULL)
 		{
@@ -170,7 +160,7 @@ static int bench_load_pcm16_wav(const char* path, BenchAudio* out_audio)
 	values = pcm_size / sizeof(int16_t);
 	for (i = 0u; i < values; ++i)
 	{
-		out_audio->pcm[i] = (int16_t)bench_read_u16le(pcm_bytes + i * 2u);
+		out_audio->pcm[i] = (int16_t)rg_bin_load_u16_le(pcm_bytes + i * 2u);
 	}
 	out_audio->name = path;
 	out_audio->frames = (uint32_t)(values / channels);

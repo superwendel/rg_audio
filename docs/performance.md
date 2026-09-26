@@ -61,7 +61,8 @@ RGS medium is 23.7% smaller than QOA and
 0.93 MiB. SNR is the median of finite per-file values;
 it does not replace listening. IMA block padding counts toward file size but
 is excluded from error calculations beyond the source timeline. High and QOA
-have the same total size here, but the current RGS encoder can reconstruct
+have the same total size rounded to MiB here; RGS adds four header bytes per
+file, or 604 bytes across this corpus. The current RGS encoder can reconstruct
 different PCM.
 
 The encoder now measures actual decoded error and retries difficult frames.

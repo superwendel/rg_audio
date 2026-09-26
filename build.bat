@@ -283,7 +283,7 @@ call :setup_sdl_tool
 if errorlevel 1 exit /b 1
 cl %SDL_FLAGS% tools\rgs_convert.c /Fe:rgs_convert.exe /link /LIBPATH:"%SDL3_LIB_DIR%" /LIBPATH:"%RG_AUDIO_DEPS_DIR%\lib" SDL3.lib soxr.lib
 if errorlevel 1 exit /b 1
-cl %RUNTIME_FLAGS% tests\test_rgs_tools.c /Fe:test_rgs_tools.exe
+cl %SDL_FLAGS% tests\test_rgs_tools.c /Fe:test_rgs_tools.exe /link /LIBPATH:"%SDL3_LIB_DIR%" /LIBPATH:"%RG_AUDIO_DEPS_DIR%\lib" SDL3.lib soxr.lib
 if errorlevel 1 exit /b 1
 test_rgs_tools.exe rgs_convert.exe
 exit /b %errorlevel%

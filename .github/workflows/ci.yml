@@ -455,7 +455,7 @@ jobs:
             -o "$output_dir/rgs_player"
           gcc "${common[@]}" tests/test_rgs_audio_prepare.c -lsoxr -lm -o "$output_dir/test_prepare"
           "$output_dir/test_prepare"
-          gcc "${common[@]}" tests/test_rgs_tools.c -lm -o "$output_dir/test_tools"
+          gcc "${common[@]}" tests/test_rgs_tools.c "${sdl_libs[@]}" -lsoxr -lm -o "$output_dir/test_tools"
           "$output_dir/test_tools" "$output_dir/rgs_convert"
           mkdir -p build/bench
           gcc "${common[@]}" benchmarks/codec_adapter.c -lsoxr -lsndfile -lm -o build/bench/codec_candidate.exe

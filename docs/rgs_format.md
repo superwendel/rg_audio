@@ -153,8 +153,8 @@ Writers SHOULD zero those codes and MUST zero the four high padding bits.
 A mixed frame stores `mode_bytes * channels` bytes immediately after all LMS
 states. Mode-map blocks appear in channel order. In each block, bit `s & 7` of
 byte `s / 8` selects slice `s`: zero means an 8-byte 3-bit slice and one means a
-6-byte 2-bit slice. Unused high bits in the last mode byte MUST be zero in
-canonical output.
+6-byte 2-bit slice. Unused high bits in the last mode byte MUST be zero.
+A checked decoder MUST reject nonzero unused mode-map bits.
 
 After all mode-map blocks, payload slices appear channel-planar in the same
 order as fixed and all-2-bit frames. The exact mixed frame size is therefore:

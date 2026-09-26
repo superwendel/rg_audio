@@ -16,11 +16,10 @@
 #endif
 
 #include "rg_rgs.h"
-#include "rgs_audio_prepare.h"
+#include "rgs_tool_io.h"
+#include "rg_algo.h"
 #include "rg_gui_gpu.h"
 
-#include <errno.h>
-#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -205,18 +204,40 @@ static void rgs_player_file_list_destroy(RgsPlayerFileList* list)
 	memset(list, 0, sizeof(*list));
 }
 
-static int rgs_player_file_compare(const void* left, const void* right)
+static inline int rgs_player_file_less(const RgsPlayerFile* a, const RgsPlayerFile* b)
 {
-	const RgsPlayerFile* a = (const RgsPlayerFile*)left;
-	const RgsPlayerFile* b = (const RgsPlayerFile*)right;
 	int folded = SDL_strcasecmp(a->path, b->path);
-	return folded != 0 ? folded : strcmp(a->path, b->path);
+	return folded != 0 ? folded < 0 : strcmp(a->path, b->path) < 0;
 }
+
+/* Generated stable-sort helpers also contain assertion-only variables. */
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wunused-variable"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4100 4189)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
+
+RG_ALGO_DEFINE(RgsPlayerFile, rgs_player_file, rgs_player_file_less)
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 static void rgs_player_file_list_sort(RgsPlayerFileList* list)
 {
 	size_t i;
-	qsort(list->items, list->count, sizeof(*list->items), rgs_player_file_compare);
+	rg_algo_sort_rgs_player_file(list->items, list->count);
 	for (i = 0u; i < list->count; ++i)
 		list->labels[i] = list->items[i].label;
 }
@@ -325,16 +346,7 @@ static void rgs_player_build_envelope(RgsPlayerTrack* track)
 
 static int rgs_player_load_track(const char* path, RgsPlayerTrack* out)
 {
-	SDL_AudioSpec src_spec;
-	SDL_AudioSpec s16_spec;
-	Uint8* src_data = NULL;
-	Uint32 src_size = 0u;
-	Uint8* converted = NULL;
-	int converted_size = 0;
-	int bytes_per_frame;
-	uint32_t frames;
 	RgsPreparedAudio prepared = {0};
-	const char* prepare_error;
 	size_t bound;
 	RgRgsEncodeOptions options;
 	SDL_PathInfo path_info;
@@ -342,47 +354,8 @@ static int rgs_player_load_track(const char* path, RgsPlayerTrack* out)
 	const char* dot;
 	size_t name_length;
 	memset(out, 0, sizeof(*out));
-	if (!SDL_LoadWAV(path, &src_spec, &src_data, &src_size))
+	if (!rgs_tool_load_wav(path, &prepared, NULL))
 		return 0;
-	if (src_size > INT_MAX || src_spec.channels <= 0 ||
-	    src_spec.channels > (int)RG_RGS_MAX_CHANNELS || src_spec.freq <= 0)
-	{
-		SDL_free(src_data);
-		SDL_SetError("Unsupported WAV channel count, sample rate, or size: %s", path);
-		return 0;
-	}
-	s16_spec.format = SDL_AUDIO_S16;
-	s16_spec.channels = src_spec.channels;
-	s16_spec.freq = src_spec.freq;
-	if (!SDL_ConvertAudioSamples(&src_spec,
-	                             src_data,
-	                             (int)src_size,
-	                             &s16_spec,
-	                             &converted,
-	                             &converted_size))
-	{
-		SDL_free(src_data);
-		return 0;
-	}
-	SDL_free(src_data);
-	bytes_per_frame = src_spec.channels * (int)sizeof(int16_t);
-	if (converted_size <= 0 || converted_size % bytes_per_frame != 0 ||
-	    (uint64_t)(converted_size / bytes_per_frame) > UINT32_MAX)
-	{
-		SDL_free(converted);
-		SDL_SetError("Converted WAV has an invalid sample count: %s", path);
-		return 0;
-	}
-	frames = (uint32_t)(converted_size / bytes_per_frame);
-	prepare_error = rgs_audio_prepare_s16((const int16_t*)converted, frames,
-	                                     (uint32_t)src_spec.channels,
-	                                     (uint32_t)src_spec.freq, &prepared);
-	SDL_free(converted);
-	if (prepare_error != NULL)
-	{
-		SDL_SetError("Could not prepare WAV '%s': %s", path, prepare_error);
-		return 0;
-	}
 	/* Use the exact encoder input as the A/B reference, including the actual
 	 * flushed resampler timeline. There is no second sample-rate conversion. */
 	out->wav_pcm = prepared.pcm;
@@ -397,7 +370,7 @@ static int rgs_player_load_track(const char* path, RgsPlayerTrack* out)
 	if (out->encoded == NULL)
 	{
 		rgs_player_track_destroy(out);
-		return 0;
+		return SDL_SetError("Could not allocate the encoded output buffer");
 	}
 	options = rg_rgs_default_options();
 	options.quality = RG_RGS_QUALITY_MEDIUM;
@@ -445,36 +418,7 @@ static int rgs_player_load_track(const char* path, RgsPlayerTrack* out)
 
 static int rgs_player_save_track(const RgsPlayerTrack* track)
 {
-	char temporary[RGS_PLAYER_PATH_CAPACITY + 64u];
-	FILE* file;
-	int written = SDL_snprintf(temporary,
-	                           sizeof(temporary),
-	                           "%s.tmp.%llu",
-	                           track->sidecar_path,
-	                           (unsigned long long)SDL_GetTicksNS());
-	int success = 0;
-	if (written < 0 || (size_t)written >= sizeof(temporary))
-	{
-		SDL_SetError("Sidecar temporary path is too long");
-		return 0;
-	}
-	file = fopen(temporary, "wb");
-	if (file == NULL)
-	{
-		SDL_SetError("Could not create '%s': %s", temporary, strerror(errno));
-		return 0;
-	}
-	success = fwrite(track->encoded, 1u, track->encoded_size, file) == track->encoded_size;
-	if (success)
-		success = fflush(file) == 0;
-	/* fclose consumes the handle even when it reports a flush error. */
-	if (fclose(file) != 0)
-		success = 0;
-	if (success)
-		success = SDL_RenamePath(temporary, track->sidecar_path) ? 1 : 0;
-	if (!success)
-		SDL_RemovePath(temporary);
-	return success;
+	return rgs_tool_write_atomic(track->sidecar_path, track->encoded, track->encoded_size);
 }
 
 static int SDLCALL rgs_player_decode_thread(void* userdata)
@@ -755,38 +699,6 @@ static void rgs_player_cursor_destroy(RgsPlayerCursorState* state)
 	memset(state, 0, sizeof(*state));
 }
 
-static int rgs_player_read_file(const char* path, void** out_data, size_t* out_size)
-{
-	FILE* file = fopen(path, "rb");
-	long length;
-	void* data;
-	size_t read;
-	if (file == NULL)
-		return 0;
-	if (fseek(file, 0, SEEK_END) != 0 || (length = ftell(file)) <= 0 ||
-	    fseek(file, 0, SEEK_SET) != 0)
-	{
-		fclose(file);
-		return 0;
-	}
-	data = malloc((size_t)length);
-	if (data == NULL)
-	{
-		fclose(file);
-		return 0;
-	}
-	read = fread(data, 1u, (size_t)length, file);
-	fclose(file);
-	if (read != (size_t)length)
-	{
-		free(data);
-		return 0;
-	}
-	*out_data = data;
-	*out_size = read;
-	return 1;
-}
-
 static int rgs_player_base64_value(unsigned char character)
 {
 	if (character >= 'A' && character <= 'Z')
@@ -826,7 +738,7 @@ static int rgs_player_decode_base64(const char* encoded,
 	    character_count / 4u > SIZE_MAX / 3u)
 		return 0;
 	capacity = character_count / 4u * 3u;
-	decoded = (uint8_t*)malloc(capacity);
+	decoded = (uint8_t*)SDL_malloc(capacity);
 	if (decoded == NULL)
 		return 0;
 	while (cursor < encoded_size)
@@ -842,7 +754,7 @@ static int rgs_player_decode_base64(const char* encoded,
 				cursor += 1u;
 			if (cursor == encoded_size)
 			{
-				free(decoded);
+				SDL_free(decoded);
 				return 0;
 			}
 			character = (unsigned char)encoded[cursor++];
@@ -850,7 +762,7 @@ static int rgs_player_decode_base64(const char* encoded,
 			{
 				if (index < 2)
 				{
-					free(decoded);
+					SDL_free(decoded);
 					return 0;
 				}
 				value[index] = 0;
@@ -861,7 +773,7 @@ static int rgs_player_decode_base64(const char* encoded,
 				value[index] = rgs_player_base64_value(character);
 				if (value[index] < 0 || padding != 0)
 				{
-					free(decoded);
+					SDL_free(decoded);
 					return 0;
 				}
 			}
@@ -869,7 +781,7 @@ static int rgs_player_decode_base64(const char* encoded,
 		}
 		if (padding > 2)
 		{
-			free(decoded);
+			SDL_free(decoded);
 			return 0;
 		}
 		decoded[written++] = (uint8_t)((value[0] << 2) | (value[1] >> 4));
@@ -884,7 +796,7 @@ static int rgs_player_decode_base64(const char* encoded,
 				cursor += 1u;
 			if (cursor != encoded_size)
 			{
-				free(decoded);
+				SDL_free(decoded);
 				return 0;
 			}
 		}
@@ -914,9 +826,14 @@ static int rgs_player_font_try_load(RgsPlayerFontAssets* assets, const char* bas
 	if (metrics_written < 0 || (size_t)metrics_written >= sizeof(metrics_path) ||
 	    atlas_written < 0 || (size_t)atlas_written >= sizeof(atlas_path) ||
 	    encoded_atlas_written < 0 ||
-	    (size_t)encoded_atlas_written >= sizeof(encoded_atlas_path) ||
-	    !rgs_player_read_file(metrics_path, &metrics, &metrics_size))
+	    (size_t)encoded_atlas_written >= sizeof(encoded_atlas_path))
 		return 0;
+	metrics = SDL_LoadFile(metrics_path, &metrics_size);
+	if (metrics == NULL || metrics_size == 0u)
+	{
+		SDL_free(metrics);
+		return 0;
+	}
 	memset(&desc, 0, sizeof(desc));
 	desc.data = metrics;
 	desc.data_size = metrics_size;
@@ -926,30 +843,34 @@ static int rgs_player_font_try_load(RgsPlayerFontAssets* assets, const char* bas
 	desc.kerning_capacity = RGS_PLAYER_FONT_KERNING_CAPACITY;
 	if (!rg_text_font_load_rgfont(&assets->font, &desc))
 	{
-		free(metrics);
+		SDL_free(metrics);
 		return 0;
 	}
-	free(metrics);
-	if (!rgs_player_read_file(atlas_path, &pixels, &pixel_size))
+	SDL_free(metrics);
+	pixels = SDL_LoadFile(atlas_path, &pixel_size);
+	if (pixels == NULL || pixel_size == 0u)
 	{
 		void* encoded_pixels = NULL;
 		size_t encoded_pixel_size = 0u;
-		if (!rgs_player_read_file(encoded_atlas_path, &encoded_pixels, &encoded_pixel_size) ||
+		SDL_free(pixels);
+		pixels = NULL;
+		encoded_pixels = SDL_LoadFile(encoded_atlas_path, &encoded_pixel_size);
+		if (encoded_pixels == NULL || encoded_pixel_size == 0u ||
 		    !rgs_player_decode_base64((const char*)encoded_pixels,
 		                              encoded_pixel_size,
 		                              &pixels,
 		                              &pixel_size))
 		{
-			free(encoded_pixels);
+			SDL_free(encoded_pixels);
 			return 0;
 		}
-		free(encoded_pixels);
+		SDL_free(encoded_pixels);
 	}
 	expected_size = (u64)assets->font.metrics.atlas_width *
 	                (u64)assets->font.metrics.atlas_height * 4u;
 	if (expected_size == 0u || expected_size != (u64)pixel_size)
 	{
-		free(pixels);
+		SDL_free(pixels);
 		return 0;
 	}
 	assets->pixels = (u8*)pixels;
@@ -996,7 +917,7 @@ static int rgs_player_font_load(RgsPlayerFontAssets* assets)
 
 static void rgs_player_font_destroy(RgsPlayerFontAssets* assets)
 {
-	free(assets->pixels);
+	SDL_free(assets->pixels);
 	memset(assets, 0, sizeof(*assets));
 }
 

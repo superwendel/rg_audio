@@ -1,0 +1,358 @@
+{
+  "schema_version": 1,
+  "purpose": "Reproducible chart inputs for the RGS release article; conceptual codec placement is separate from measured size and decode time.",
+  "original_landscape": {
+    "article_url": "https://phoboslab.org/log/2023/02/qoa-time-domain-audio-compression",
+    "figure_url": "https://phoboslab.org/content/assets/qoa-comparison-chart.png",
+    "x_axis": "bitrate (kb/s)",
+    "y_axis": "complexity; qualitative, no numeric scale",
+    "quality_legend": [
+      "lossless",
+      "good",
+      "meh"
+    ],
+    "evidence_type": "Subjective illustration explicitly labeled as such by its author; not a benchmark or listening-test result.",
+    "rgs_positioning": "RGS sits near QOA in the simple time-domain family. Complexity placement is qualitative, and the good quality label is the project's subjective assessment, not derived from these measurements.",
+    "numeric_bitrate_note": "Use the separately labeled corpus-derived equivalent_stereo_44100_kbps only as a storage-rate illustration. RGS medium/low are variable rate; these are corpus averages, not fixed codec rates.",
+    "second_post_url": "https://phoboslab.org/log/2023/04/qoa-specification",
+    "external_timing_note": "The second post uses another machine, corpus, tools, timing scope and aggregation. Its times are not combined with these measurements."
+  },
+  "source_files": {
+    "release_per_file": {
+      "path": "docs/results/2026-09-26-release/per_file.csv",
+      "sha256_lf_normalized": "4cd102ba698243ad8a8785dbc7747fcea85d248061c3c431fa3a042a9796a033"
+    },
+    "release_totals": {
+      "path": "docs/results/2026-09-26-release/totals.csv",
+      "sha256_lf_normalized": "420447359a8e90272ba5192cfb44732f907340ad6b5d86af9276e5c9f360ebdc"
+    },
+    "release_channels": {
+      "path": "docs/results/2026-09-26-release/channels.csv",
+      "sha256_lf_normalized": "b122fa1f8f2a1c54253592403a389a4dcad46ce69127fc59b2a7bb5d61cfb1e7"
+    },
+    "release_metadata": {
+      "path": "docs/results/2026-09-26-release/metadata.json",
+      "sha256_lf_normalized": "aea52aad72fa9922b50a1970b6cd9250c73d213fb2e44098d7c6e0db838adf31"
+    },
+    "quality_per_file": {
+      "path": "docs/results/2026-09-26-quality/per_file.csv",
+      "sha256_lf_normalized": "cc8a8a91bff897ecff90ac150fbeee301f1ca46d1c8001cdd481367f0ca3e2a2"
+    },
+    "quality_metadata": {
+      "path": "docs/results/2026-09-26-quality/metadata.json",
+      "sha256_lf_normalized": "df5f99b65816e665827a3b6d196bf2cbd0e07e84527e36ce0bbf4c312ea12bd2"
+    },
+    "original_normalized_per_file": {
+      "path": "docs/results/2026-09-25/per_file.csv",
+      "sha256_lf_normalized": "7e8961d49816b6dee8df64defaa134bab847bdace92418fb378ef36110401b23"
+    }
+  },
+  "corpus": {
+    "assets": 151,
+    "mono_assets": 59,
+    "stereo_assets": 92,
+    "duration_seconds": 4941.452902494331,
+    "sum_frames_per_channel": 217918073,
+    "interleaved_channel_samples": 427243330,
+    "pcm_bits_per_channel_sample": 16,
+    "pcm_payload_bytes": 854486660,
+    "pcm_payload_mib": 814.9019813537598,
+    "pcm_wav_bytes": 854493304,
+    "pcm_wav_total_header_bytes": 6644,
+    "pcm_wav_header_bytes_per_file": 44,
+    "denominator_note": "Raw interleaved signed-16 PCM payload, frames times channels times two; excludes WAV headers. All 151 archived PCM WAV files have exactly 44 bytes of overhead.",
+    "pcm_payload_stereo_44100_kbps": 1411.2
+  },
+  "arithmetic": {
+    "encoded_mib": "sum(encoded_bytes) / 1048576",
+    "encoded_fraction_of_pcm_payload": "sum(encoded_bytes) / sum(frames * channels * 2)",
+    "encoded_bits_per_channel_sample": "8 * sum(encoded_bytes) / sum(frames * channels)",
+    "equivalent_stereo_44100_kbps": "encoded_bits_per_channel_sample * 2 * 44100 / 1000",
+    "corpus_average_kbps": "8 * sum(encoded_bytes) / sum(frames / rate) / 1000",
+    "decode_sum_per_file_median_ms": "sum(median_ms) across 151 assets; each median is across seven trial batch means",
+    "decode_fraction_of_qoa": "codec decode_sum_per_file_median_ms / QOA decode_sum_per_file_median_ms",
+    "decode_ns_per_channel_sample": "decode_sum_per_file_median_ms * 1000000 / sum(frames * channels)",
+    "diagnostic_median_per_asset_snr_db": "median of 151 whole-file SNR values; whole-file SNR = 10*log10(sum(reference^2)/sum((reference-decoded)^2)); not a perceptual score"
+  },
+  "measurement": {
+    "timestamp_utc": "2026-09-26T11:11:26Z",
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12700KF",
+    "cpu_affinity": [
+      0
+    ],
+    "compiler": "MSVC 194435219",
+    "flags": "/std:c11 /W4 /WX /O2",
+    "trials_per_case": 7,
+    "timing_scope": "Existing encoded assets, preallocated PCM, checked RGS and QOA header parsing included; loading, allocation, checksum scans, warmup excluded. Totals sum per-file medians of seven trial batch means.",
+    "measured_header": {
+      "sha256": "ecff374dd626bde76ad2e0b26c257b3b828949295ac6b3c838d53490de19f20e",
+      "source": "benchmarks/baselines/rg_rgs_2026_09_26_measured.h"
+    },
+    "release_header_provenance": {
+      "final_header": {
+        "source": "src/rg_rgs.h",
+        "sha256": "c815225f3124541c038b6d9249a1d65ddf78b22843de4133f05ab9da21d94afc"
+      },
+      "c_equivalence": {
+        "source": "benchmarks/baselines/rg_rgs_2026_09_26_c_equivalence.json",
+        "sha256": "70379eb813c962aa57bf937624698f5d8eddc123ae300372acfeced6b94584ec"
+      },
+      "scope": "The measured header remains the benchmark input. A C++-only initializer adjustment in the release header leaves both measured C translation units identical after the documented preprocessing normalization."
+    }
+  },
+  "measured_scatter": {
+    "x_field": "encoded_mib",
+    "x_display_unit": "MiB of total encoded files",
+    "y_field": "decode_sum_per_file_median_ms",
+    "y_display_unit": "seconds of total decode time",
+    "direction": "Lower is smaller/faster on both axes. Neither axis measures perceptual quality.",
+    "points": [
+      {
+        "id": "rgs_high",
+        "label": "RGS high",
+        "assets": 151,
+        "encoded_bytes": 172577756,
+        "encoded_mib": 164.5829734802246,
+        "encoded_fraction_of_pcm_payload": 0.20196658892252337,
+        "encoded_bits_per_channel_sample": 3.231465422760374,
+        "equivalent_stereo_44100_kbps": 285.015250287465,
+        "corpus_average_kbps": 279.39597426965133,
+        "decode_sum_per_file_median_ms": 1012.56981362,
+        "decode_fraction_of_qoa": 0.8040251608139559,
+        "decode_ns_per_channel_sample": 2.3700073061877878,
+        "faster_than_qoa_assets": 151,
+        "diagnostic_median_per_asset_snr_db": 35.784798804574216,
+        "size_and_decode_source": "release_per_file",
+        "row_filter": {
+          "revision": "candidate",
+          "quality": "high",
+          "mode": "checked"
+        },
+        "quality_source": "quality_per_file"
+      },
+      {
+        "id": "rgs_medium",
+        "label": "RGS medium",
+        "assets": 151,
+        "encoded_bytes": 131625224,
+        "encoded_mib": 125.52759552001953,
+        "encoded_fraction_of_pcm_payload": 0.15404011573451598,
+        "encoded_bits_per_channel_sample": 2.4646418517522557,
+        "equivalent_stereo_44100_kbps": 217.38141132454894,
+        "corpus_average_kbps": 213.0955839867398,
+        "decode_sum_per_file_median_ms": 1016.002031544,
+        "decode_fraction_of_qoa": 0.8067504934588497,
+        "decode_ns_per_channel_sample": 2.378040709363444,
+        "faster_than_qoa_assets": 150,
+        "diagnostic_median_per_asset_snr_db": 28.87386379629938,
+        "size_and_decode_source": "release_per_file",
+        "row_filter": {
+          "revision": "candidate",
+          "quality": "medium",
+          "mode": "checked"
+        },
+        "quality_source": "quality_per_file"
+      },
+      {
+        "id": "rgs_low",
+        "label": "RGS low",
+        "assets": 151,
+        "encoded_bytes": 130651244,
+        "encoded_mib": 124.59873580932617,
+        "encoded_fraction_of_pcm_payload": 0.1529002734811565,
+        "encoded_bits_per_channel_sample": 2.446404375698504,
+        "equivalent_stereo_44100_kbps": 215.77286593660804,
+        "corpus_average_kbps": 211.51875220188828,
+        "decode_sum_per_file_median_ms": 1007.25339006,
+        "decode_fraction_of_qoa": 0.799803685662033,
+        "decode_ns_per_channel_sample": 2.3575637566068033,
+        "faster_than_qoa_assets": 151,
+        "diagnostic_median_per_asset_snr_db": 27.38215516761571,
+        "size_and_decode_source": "release_per_file",
+        "row_filter": {
+          "revision": "candidate",
+          "quality": "low",
+          "mode": "checked"
+        },
+        "quality_source": "quality_per_file"
+      },
+      {
+        "id": "qoa",
+        "label": "QOA",
+        "assets": 151,
+        "encoded_bytes": 172577152,
+        "encoded_mib": 164.5823974609375,
+        "encoded_fraction_of_pcm_payload": 0.20196588206537947,
+        "encoded_bits_per_channel_sample": 3.2314541130460714,
+        "equivalent_stereo_44100_kbps": 285.0142527706635,
+        "corpus_average_kbps": 279.3949964195948,
+        "decode_sum_per_file_median_ms": 1259.375779478,
+        "decode_fraction_of_qoa": 1.0,
+        "decode_ns_per_channel_sample": 2.947678035086001,
+        "faster_than_qoa_assets": null,
+        "diagnostic_median_per_asset_snr_db": 35.784798804574216,
+        "size_and_decode_source": "release_per_file",
+        "row_filter": {
+          "revision": "reference",
+          "quality": "default",
+          "mode": "qoa"
+        },
+        "quality_source": "original_normalized_per_file"
+      }
+    ],
+    "y_display_conversion": "divide decode_sum_per_file_median_ms by 1000"
+  },
+  "storage_only_points": [
+    {
+      "id": "pcm",
+      "label": "PCM16 WAV",
+      "assets": 151,
+      "encoded_bytes": 854493304,
+      "encoded_mib": 814.908317565918,
+      "encoded_fraction_of_pcm_payload": 1.000007775428583,
+      "encoded_bits_per_channel_sample": 16.000124406857328,
+      "decode_fraction_of_qoa": null,
+      "source": "original_normalized_per_file",
+      "row_filter": {
+        "lane": "normalized",
+        "revision": "reference",
+        "codec": "pcm",
+        "quality": "default"
+      },
+      "diagnostic_median_per_asset_snr_db": null,
+      "exact_pcm": true,
+      "equivalent_stereo_44100_kbps": 1411.2109726848162,
+      "corpus_average_kbps": 1383.3879563132882
+    },
+    {
+      "id": "ima",
+      "label": "WAV IMA ADPCM",
+      "assets": 151,
+      "encoded_bytes": 214489956,
+      "encoded_mib": 204.55356216430664,
+      "encoded_fraction_of_pcm_payload": 0.2510161551264007,
+      "encoded_bits_per_channel_sample": 4.016258482022411,
+      "decode_fraction_of_qoa": null,
+      "source": "original_normalized_per_file",
+      "row_filter": {
+        "lane": "normalized",
+        "revision": "reference",
+        "codec": "ima",
+        "quality": "default"
+      },
+      "diagnostic_median_per_asset_snr_db": 33.37460767987996,
+      "exact_pcm": false,
+      "equivalent_stereo_44100_kbps": 354.2339981143766,
+      "corpus_average_kbps": 347.25002582415453
+    }
+  ],
+  "mono_stereo_decode": [
+    {
+      "channels": 1,
+      "quality": "high",
+      "assets": 59,
+      "rgs_ms": 17.602119594,
+      "qoa_ms": 19.659323336,
+      "decode_fraction_of_qoa": 0.8953573474101795,
+      "faster_than_qoa_assets": 59
+    },
+    {
+      "channels": 1,
+      "quality": "medium",
+      "assets": 59,
+      "rgs_ms": 17.515304468,
+      "qoa_ms": 19.659323336,
+      "decode_fraction_of_qoa": 0.8909413700890768,
+      "faster_than_qoa_assets": 58
+    },
+    {
+      "channels": 1,
+      "quality": "low",
+      "assets": 59,
+      "rgs_ms": 17.320949193,
+      "qoa_ms": 19.659323336,
+      "decode_fraction_of_qoa": 0.8810552070875203,
+      "faster_than_qoa_assets": 59
+    },
+    {
+      "channels": 2,
+      "quality": "high",
+      "assets": 92,
+      "rgs_ms": 994.967694026,
+      "qoa_ms": 1239.716456142,
+      "decode_fraction_of_qoa": 0.8025768223827096,
+      "faster_than_qoa_assets": 92
+    },
+    {
+      "channels": 2,
+      "quality": "medium",
+      "assets": 92,
+      "rgs_ms": 998.486727076,
+      "qoa_ms": 1239.716456142,
+      "decode_fraction_of_qoa": 0.8054154013437013,
+      "faster_than_qoa_assets": 92
+    },
+    {
+      "channels": 2,
+      "quality": "low",
+      "assets": 92,
+      "rgs_ms": 989.932440867,
+      "qoa_ms": 1239.716456142,
+      "decode_fraction_of_qoa": 0.7985152056040876,
+      "faster_than_qoa_assets": 92
+    }
+  ],
+  "limits": [
+    "RGS and QOA scatter timings come exclusively from the same final release run; final RGS sizes and quality hashes match the quality evaluation.",
+    "PCM and IMA ADPCM are storage-only references from the same normalized inputs. Their older decoder timings are omitted, and PCM is not plotted with an invented zero decode time.",
+    "Quality diagnostics reuse unchanged QOA/IMA encodings on the same normalized inputs. SNR is numerical error, not a perceptual ranking or proof of transparency.",
+    "No controlled listening test was completed. Rare local quality regressions and flagged transient errors remain; see docs/results/2026-09-26-quality/README.md.",
+    "Different presets are not quality-matched. Strict per-file median wins are not statistical significance tests.",
+    "Header and final partial-slice overhead are included in encoded sizes. Equivalent stereo rate is a corpus-derived normalization, not an observed fixed bitrate for every asset."
+  ],
+  "source_hash_method": "SHA-256 after replacing CRLF with LF in UTF-8 text, so source CSV verification is stable across Git newline normalization; file contents and numeric values are unchanged.",
+  "rendered_landscape": {
+    "figure": "docs/posts/assets/rgs-codec-landscape.png",
+    "font_family": "Comic Sans MS",
+    "x_axis": "bitrate (kb/s), 44.1 kHz stereo reference",
+    "y_axis": "subjective format/decoder design complexity; drawing positions, no numeric scale or timing interpretation; encoder search effort excluded",
+    "rgs_vertical_placement": "Above QOA: same four-tap predictor, with additional slice widths, frame modes, mode maps, padding and payload checks. The vertical gap is illustrative, not a measured ratio.",
+    "historical_approximate_positions_kbps": {
+      "Opus": 64,
+      "Vorbis": 96,
+      "MP3": 128,
+      "WavPack": 740,
+      "FLAC": 770
+    },
+    "historical_source": "https://phoboslab.org/log/2023/02/qoa-time-domain-audio-compression",
+    "historical_quality_labels": {
+      "good": [
+        "Opus",
+        "Vorbis",
+        "MP3",
+        "QOA"
+      ],
+      "meh": [
+        "ADPCM"
+      ],
+      "lossless": [
+        "WavPack",
+        "FLAC",
+        "WAV / PCM16"
+      ]
+    },
+    "highlighted_region": "The Triangle of Neglect",
+    "rgs_range_kbps": [
+      215.77286593660804,
+      285.015250287465
+    ],
+    "rgs_quality_label": "good",
+    "rgs_quality_basis": "The project's subjective assessment for this schematic.",
+    "refreshed_storage_positions": "RGS and QOA use measured_scatter.points equivalent_stereo_44100_kbps; IMA ADPCM uses storage_only_points equivalent_stereo_44100_kbps; PCM16 uses 16 * 44100 * 2 / 1000 = 1411.2 kb/s without file overhead.",
+    "limits": [
+      "Original good/meh colors are the original author's subjective judgments, not a new listening test.",
+      "RGS's good quality label is the project's subjective assessment. Its position above QOA reflects added format/decoder rules, not measured runtime. Encoder width searches, decoded-error replay and retries add separate complexity that is not plotted.",
+      "Historical codec rates are examples; those formats have variable rates. RGS medium/low rates are pooled corpus equivalents, not fixed encoding guarantees."
+    ]
+  }
+}
